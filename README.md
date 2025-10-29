@@ -1,6 +1,11 @@
-## Procedural City Engine (Vulkan + CMake)
+## City of Wires
 
-A Blade Runner-inspired procedural city generator that creates a dystopian futuristic cityscape with towering asymmetrical skyscrapers, atmospheric fog, volumetric lighting, and neon glow effects.
+City of Wires is a procedural cityscape tech demo — a tribute to the rain-slick streets and glowing spires of retro-futurist noir.
+
+Fly freely between monolithic towers, each one built from layered detail: flickering neon signs, holographic adverts, rusted vents, and apartment windows pulsing with life.
+There are no missions, no enemies — only atmosphere.
+
+Let the sound of the rain, the hum of the power grid, and the flicker of distant lights pull you into the mood of a world forever caught between night and neon.
 
 ### Features
 
