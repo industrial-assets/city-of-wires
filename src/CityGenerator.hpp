@@ -1,0 +1,79 @@
+#pragma once
+
+#include <vector>
+#include <glm/glm.hpp>
+#include <random>
+
+namespace pcengine {
+
+struct BuildingPart {
+    glm::vec3 position;  // Position relative to building base
+    glm::vec3 size;
+    glm::vec3 color;
+    int detailLevel;     // For recursive branch generation
+};
+
+struct Building {
+    glm::vec3 position;
+    glm::vec3 size;      // Main trunk size
+    glm::vec3 color;
+    std::vector<BuildingPart> parts;  // Trunk + branches
+    std::vector<glm::vec3> neonLights;
+    float heightVariation;
+    bool hasAntenna;
+};
+
+struct NeonLight {
+    glm::vec3 position;
+    glm::vec3 color;
+    float intensity;
+    float radius;
+};
+
+class CityGenerator {
+public:
+    CityGenerator();
+    ~CityGenerator() = default;
+
+    void generateCity(int seed = 42);
+    const std::vector<Building>& getBuildings() const { return buildings_; }
+    const std::vector<NeonLight>& getNeonLights() const { return neonLights_; }
+    
+    // City parameters
+    void setCitySize(float width, float depth) { cityWidth_ = width; cityDepth_ = depth; }
+    void setBuildingDensity(float density) { buildingDensity_ = density; }
+    void setMaxHeight(float height) { maxHeight_ = height; }
+    void setHeightDistributionLambda(float lambda) { heightDistributionLambda_ = lambda; }
+    void setGridSpacing(float spacing) { gridSpacing_ = spacing; }
+
+private:
+    void generateBuilding(glm::vec2 gridPos);
+    void generateBranches(Building& building, BuildingPart& parent, int maxDepth, int currentDepth = 0);
+    void addSymmetricBranches(Building& building, const BuildingPart& parent, int detailLevel);
+    void addNeonLights(Building& building);
+    glm::vec3 generateBuildingColor();
+    float generateHeight(float baseHeight);
+    
+    std::vector<Building> buildings_;
+    std::vector<NeonLight> neonLights_;
+    
+    // City parameters
+    float cityWidth_ = 200.0f;
+    float cityDepth_ = 200.0f;
+    float buildingDensity_ = 0.7f;
+    float maxHeight_ = 150.0f;
+    float minHeight_ = 20.0f;
+    float heightDistributionLambda_ = 2.0f; // Controls exponential height distribution
+    
+    // Grid parameters
+    int gridSize_ = 50;
+    float gridSpacing_ = 4.0f;
+    
+    // Random generation
+    std::mt19937 rng_;
+    std::uniform_real_distribution<float> heightDist_;
+    std::uniform_real_distribution<float> colorDist_;
+    std::uniform_real_distribution<float> neonDist_;
+};
+
+}

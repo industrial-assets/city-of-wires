@@ -1,0 +1,16 @@
+# Hashes of file build rules.
+cf4ae6c2b42cab4e85d94843c89fa20a CMakeFiles/compile_shaders
+663bbab3ae113740166fc9ded594ca1f _deps/glfw-build/CMakeFiles/uninstall
+6a1d022aa2d1d492cedb8bbfe41dbb3e _deps/glfw-build/src/CMakeFiles/update_mappings
+4ee4161e377a94fb0b0e4b3aed2010b5 shaders/bloom.frag.spv
+e5f292bcffd5180ad240ad8ec3e3a080 shaders/city.frag.spv
+fbccadf69a7acec716c8bab3ac3ea4bc shaders/city.vert.spv
+03112d09f01f3c1f7201e1c5468ca0f4 shaders/cube.frag.spv
+9c02dfe5aca85d4c52635a27a0673293 shaders/cube.vert.spv
+44d46d76b1a733e614112151aed276f5 shaders/hdr.frag.spv
+4a695203811413878d869d53390aa8d2 shaders/neon.frag.spv
+82dcdeea3b62d60bd6c1533995fcb0d4 shaders/neon.vert.spv
+0ea566db0e377eee361702d0e51d5ac7 shaders/postprocess.frag.spv
+3ba962eb74ef76cd2928552a1219e022 shaders/postprocess.vert.spv
+e1e81245b341f7467679484eb1784028 shaders/sun.frag.spv
+fb2b143b3da897c60f4640365c1641ee shaders/sun.vert.spv
