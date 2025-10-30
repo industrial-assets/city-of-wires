@@ -29,6 +29,9 @@ struct NeonLight {
     glm::vec3 color;
     float intensity;
     float radius;
+    float width;   // Horizontal size
+    float height;  // Vertical size
+    int face;      // 0=front(+Z), 1=back(-Z), 2=left(-X), 3=right(+X)
 };
 
 class CityGenerator {
@@ -41,6 +44,7 @@ public:
     // Chunk-based generation for infinite city
     void generateChunk(int chunkX, int chunkZ, int baseSeed = 42);
     void removeChunk(int chunkX, int chunkZ);
+    void clearAllChunks();
     
     const std::vector<Building>& getBuildings() const { return buildings_; }
     const std::vector<NeonLight>& getNeonLights() const { return neonLights_; }

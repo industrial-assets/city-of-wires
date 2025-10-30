@@ -71,11 +71,19 @@ CMakeFiles/compile_shaders: shaders/city.frag.spv
 CMakeFiles/compile_shaders: shaders/city.vert.spv
 CMakeFiles/compile_shaders: shaders/cube.frag.spv
 CMakeFiles/compile_shaders: shaders/cube.vert.spv
+CMakeFiles/compile_shaders: shaders/debug_chunk.frag.spv
+CMakeFiles/compile_shaders: shaders/debug_chunk.vert.spv
+CMakeFiles/compile_shaders: shaders/debug_text.frag.spv
+CMakeFiles/compile_shaders: shaders/debug_text.vert.spv
 CMakeFiles/compile_shaders: shaders/hdr.frag.spv
 CMakeFiles/compile_shaders: shaders/neon.frag.spv
 CMakeFiles/compile_shaders: shaders/neon.vert.spv
 CMakeFiles/compile_shaders: shaders/postprocess.frag.spv
 CMakeFiles/compile_shaders: shaders/postprocess.vert.spv
+CMakeFiles/compile_shaders: shaders/shadow_darken.frag.spv
+CMakeFiles/compile_shaders: shaders/shadow_darken.vert.spv
+CMakeFiles/compile_shaders: shaders/shadow_volume.frag.spv
+CMakeFiles/compile_shaders: shaders/shadow_volume.vert.spv
 CMakeFiles/compile_shaders: shaders/sun.frag.spv
 CMakeFiles/compile_shaders: shaders/sun.vert.spv
 
@@ -99,32 +107,64 @@ shaders/cube.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Compiling shader cube.vert"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/cube.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/cube.vert.spv
 
+shaders/debug_chunk.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_chunk.frag
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Compiling shader debug_chunk.frag"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_chunk.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/debug_chunk.frag.spv
+
+shaders/debug_chunk.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_chunk.vert
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Compiling shader debug_chunk.vert"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_chunk.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/debug_chunk.vert.spv
+
+shaders/debug_text.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_text.frag
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Compiling shader debug_text.frag"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_text.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/debug_text.frag.spv
+
+shaders/debug_text.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_text.vert
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Compiling shader debug_text.vert"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/debug_text.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/debug_text.vert.spv
+
 shaders/hdr.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/hdr.frag
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Compiling shader hdr.frag"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Compiling shader hdr.frag"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/hdr.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/hdr.frag.spv
 
 shaders/neon.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/neon.frag
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Compiling shader neon.frag"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Compiling shader neon.frag"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/neon.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/neon.frag.spv
 
 shaders/neon.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/neon.vert
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Compiling shader neon.vert"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Compiling shader neon.vert"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/neon.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/neon.vert.spv
 
 shaders/postprocess.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/postprocess.frag
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Compiling shader postprocess.frag"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Compiling shader postprocess.frag"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/postprocess.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/postprocess.frag.spv
 
 shaders/postprocess.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/postprocess.vert
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Compiling shader postprocess.vert"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Compiling shader postprocess.vert"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/postprocess.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/postprocess.vert.spv
 
+shaders/shadow_darken.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_darken.frag
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Compiling shader shadow_darken.frag"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_darken.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/shadow_darken.frag.spv
+
+shaders/shadow_darken.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_darken.vert
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Compiling shader shadow_darken.vert"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_darken.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/shadow_darken.vert.spv
+
+shaders/shadow_volume.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_volume.frag
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Compiling shader shadow_volume.frag"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_volume.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/shadow_volume.frag.spv
+
+shaders/shadow_volume.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_volume.vert
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Compiling shader shadow_volume.vert"
+	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/shadow_volume.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/shadow_volume.vert.spv
+
 shaders/sun.frag.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/sun.frag
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Compiling shader sun.frag"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Compiling shader sun.frag"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/sun.frag -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/sun.frag.spv
 
 shaders/sun.vert.spv: /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/sun.vert
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Compiling shader sun.vert"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Compiling shader sun.vert"
 	/usr/local/bin/glslc -O /Users/johnbower/Documents/_work/Personal/procedural_city/shaders/sun.vert -o /Users/johnbower/Documents/_work/Personal/procedural_city/build/shaders/sun.vert.spv
 
 compile_shaders: CMakeFiles/compile_shaders
@@ -133,11 +173,19 @@ compile_shaders: shaders/city.frag.spv
 compile_shaders: shaders/city.vert.spv
 compile_shaders: shaders/cube.frag.spv
 compile_shaders: shaders/cube.vert.spv
+compile_shaders: shaders/debug_chunk.frag.spv
+compile_shaders: shaders/debug_chunk.vert.spv
+compile_shaders: shaders/debug_text.frag.spv
+compile_shaders: shaders/debug_text.vert.spv
 compile_shaders: shaders/hdr.frag.spv
 compile_shaders: shaders/neon.frag.spv
 compile_shaders: shaders/neon.vert.spv
 compile_shaders: shaders/postprocess.frag.spv
 compile_shaders: shaders/postprocess.vert.spv
+compile_shaders: shaders/shadow_darken.frag.spv
+compile_shaders: shaders/shadow_darken.vert.spv
+compile_shaders: shaders/shadow_volume.frag.spv
+compile_shaders: shaders/shadow_volume.vert.spv
 compile_shaders: shaders/sun.frag.spv
 compile_shaders: shaders/sun.vert.spv
 compile_shaders: CMakeFiles/compile_shaders.dir/build.make

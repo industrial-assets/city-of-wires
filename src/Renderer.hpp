@@ -45,6 +45,9 @@ struct PostProcessingUBO {
     float colorTemperature;
     float lightShaftIntensity;
     float lightShaftDensity;
+    // std140 requires mat4 to start at a 16-byte boundary. We have 13 floats
+    // above (52 bytes), so add 3 floats of padding to reach the next 16-byte boundary.
+    float _pad_before_mats[3];
     float view[16];  // View matrix for sun projection
     float proj[16];  // Projection matrix for sun projection
     float sunWorldDir[3];  // World-space sun direction (normalized, points towards sun)
@@ -80,6 +83,7 @@ private:
     bool createRenderPass();
     bool createDescriptorSetLayout();
     bool createPipeline();
+    bool createPipelineWireframe();  // Wireframe version of city pipeline
     bool createNeonPipeline();
     bool createDepthResources();
     bool createFramebuffers();
@@ -91,6 +95,7 @@ private:
     bool reloadShaders();
     bool createCityGeometry();
     bool createNeonGeometry();
+    bool createGroundGeometry();
     void updateChunks();
     void rebuildGeometryIfNeeded();
     bool loadTextures();
@@ -102,6 +107,11 @@ private:
     // Shadow map methods
     bool createShadowMapResources();
     void renderShadowMap(VkCommandBuffer cmd);
+    
+    // Shadow volume methods
+    bool createShadowVolumeGeometry();
+    bool createShadowVolumePipeline();
+    void renderShadowVolumes(VkCommandBuffer cmd);
     
     // Post-processing methods
     bool createHDRRenderTarget();
@@ -141,6 +151,7 @@ private:
     VkDescriptorSetLayout descriptorSetLayout_ = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
     VkPipeline graphicsPipeline_ = VK_NULL_HANDLE;
+    VkPipeline graphicsPipelineWireframe_ = VK_NULL_HANDLE;  // Wireframe version for debug mode
     VkPipeline neonPipeline_ = VK_NULL_HANDLE;
 
     VkImage depthImage_ = VK_NULL_HANDLE;
@@ -180,6 +191,22 @@ private:
     VkBuffer cityIndexBuffer_ = VK_NULL_HANDLE;
     VkDeviceMemory cityIndexBufferMemory_ = VK_NULL_HANDLE;
     uint32_t cityIndexCount_ = 0;
+    
+    // Ground plane geometry
+    VkBuffer groundVertexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory groundVertexBufferMemory_ = VK_NULL_HANDLE;
+    VkBuffer groundIndexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory groundIndexBufferMemory_ = VK_NULL_HANDLE;
+    uint32_t groundIndexCount_ = 0;
+    
+    // Shadow volume geometry
+    VkBuffer shadowVolumeVertexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory shadowVolumeVertexBufferMemory_ = VK_NULL_HANDLE;
+    VkBuffer shadowVolumeIndexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory shadowVolumeIndexBufferMemory_ = VK_NULL_HANDLE;
+    uint32_t shadowVolumeIndexCount_ = 0;
+    VkPipeline shadowVolumePipeline_ = VK_NULL_HANDLE;
+    bool shadowVolumesEnabled_ = false;  // Toggle for shadow volume rendering
     
     // Neon geometry
     VkBuffer neonVertexBuffer_ = VK_NULL_HANDLE;
@@ -246,13 +273,13 @@ private:
     std::set<std::pair<int, int>> activeChunks_;  // Track which chunks are currently loaded
     bool geometryNeedsRebuild_ = false;  // Flag to indicate geometry needs updating
     float chunkLoadDistance_ = 150.0f;  // Distance to load chunks (in world units)
-    float chunkUnloadDistance_ = 200.0f;  // Distance to unload chunks (in world units)
+    float chunkUnloadDistance_ = 250.0f;  // Distance to unload chunks (in world units) - moderate hysteresis
     
     // Atmospheric parameters
     glm::vec3 cameraPos_ = glm::vec3(0, 100, -150);  // Start behind the city, looking towards it
     glm::vec3 fogColor_ = glm::vec3(0.08f, 0.12f, 0.15f);  // Slightly more green-tinted fog
     float fogDensity_ = 0.02f;  // Slightly denser fog
-    glm::vec3 skyLightDir_ = glm::vec3(0.2f, -0.8f, 0.3f);  // Original light direction
+    glm::vec3 skyLightDir_ = glm::vec3(0.3f, -0.7f, 0.6f);  // Light travels: right, DOWN, forward (sun is upper-left)
     float skyLightIntensity_ = 0.6f;  // Slightly stronger light
     
     // Post-processing parameters
@@ -267,8 +294,56 @@ private:
     float contrast_ = 1.2f;  // Moderate contrast
     float saturation_ = 0.9f;  // Less desaturated for more vibrant colors
     float colorTemperature_ = 0.6f;  // Cooler temperature for dystopian look
-    float lightShaftIntensity_ = 0.6f;  // Stronger light shafts
-    float lightShaftDensity_ = 0.03f;  // Denser light shafts
+    float lightShaftIntensity_ = 2.5f;  // Much stronger light shafts for visibility
+    float lightShaftDensity_ = 0.5f;  // More ray samples for quality
+
+    // Debug Overlay state and methods
+    bool debugOverlayVisible_ = false;  // Tab key - show on-screen metrics
+    bool debugVisualizationMode_ = false;  // ] key - wireframe/chunk boxes/bypass effects
+    float frameTimes_[128] = {0}; // For FPS smoothing
+    int frameTimeIndex_ = 0;
+    float debug_fpsSmoothed_ = 0.0f;
+    void renderDebugOverlay();
+    void gatherDebugOverlayStats(float deltaSeconds);
+    
+    // Debug Overlay rendering resources
+    VkPipeline debugTextPipeline_ = VK_NULL_HANDLE;
+    VkPipelineLayout debugTextPipelineLayout_ = VK_NULL_HANDLE;
+    VkDescriptorSetLayout debugTextDescriptorLayout_ = VK_NULL_HANDLE;
+    VkDescriptorPool debugTextDescriptorPool_ = VK_NULL_HANDLE;
+    VkDescriptorSet debugTextDescriptorSet_ = VK_NULL_HANDLE;
+    
+    VkBuffer debugTextVertexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory debugTextVertexMemory_ = VK_NULL_HANDLE;
+    VkBuffer debugTextIndexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory debugTextIndexMemory_ = VK_NULL_HANDLE;
+    uint32_t debugTextIndexCount_ = 0;
+    
+    VkImage debugFontImage_ = VK_NULL_HANDLE;
+    VkDeviceMemory debugFontMemory_ = VK_NULL_HANDLE;
+    VkImageView debugFontView_ = VK_NULL_HANDLE;
+    VkSampler debugFontSampler_ = VK_NULL_HANDLE;
+    
+    bool createDebugOverlayResources();
+    bool createDebugTextPipeline();
+    bool createDebugFontTexture();
+    void updateDebugTextGeometry(const char* text, float x, float y, float scale);
+    void renderDebugOverlayGraphical(VkCommandBuffer cmd);
+    
+    // Chunk visualization
+    VkPipeline debugChunkPipeline_ = VK_NULL_HANDLE;
+    VkPipelineLayout debugChunkPipelineLayout_ = VK_NULL_HANDLE;
+    VkDescriptorSetLayout debugChunkDescriptorLayout_ = VK_NULL_HANDLE;
+    VkDescriptorPool debugChunkDescriptorPool_ = VK_NULL_HANDLE;
+    VkDescriptorSet debugChunkDescriptorSet_ = VK_NULL_HANDLE;
+    
+    VkBuffer debugChunkVertexBuffer_ = VK_NULL_HANDLE;
+    VkDeviceMemory debugChunkVertexMemory_ = VK_NULL_HANDLE;
+    uint32_t debugChunkVertexCount_ = 0;
+    
+    bool createDebugChunkVisualization();
+    void updateDebugChunkGeometry();
+    void renderDebugChunks(VkCommandBuffer cmd);
     
     // Flight controls
     glm::vec3 cameraFront_ = glm::vec3(0.0f, -0.2f, 1.0f);  // Look towards the city (positive Z)

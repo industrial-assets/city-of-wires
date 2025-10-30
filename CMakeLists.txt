@@ -74,7 +74,9 @@ set(ENGINE_SOURCES
   src/RendererResources.cpp
   src/RendererGeometry.cpp
   src/RendererShadow.cpp
+  src/RendererShadowVolume.cpp
   src/RendererPostProcess.cpp
+  src/RendererDebugOverlay.cpp
   src/VulkanUtils.cpp
   src/CityGenerator.cpp
 )

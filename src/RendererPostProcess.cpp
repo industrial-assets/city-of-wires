@@ -39,7 +39,7 @@ RendererPostProcess::~RendererPostProcess() {
     if (hdrColorMemory_) vkFreeMemory(device_, hdrColorMemory_, nullptr);
 }
 
-bool RendererPostProcess::createHDRRenderTarget(VkExtent2D swapchainExtent, VkImageView depthImageView, VkRenderPass& hdrRenderPass, VkFramebuffer& hdrFramebuffer) {
+bool RendererPostProcess::createHDRRenderTarget(VkExtent2D swapchainExtent, VkImageView depthImageView, VkFormat depthFormat, VkRenderPass& hdrRenderPass, VkFramebuffer& hdrFramebuffer) {
     // Create HDR color image (RGBA16F for HDR)
     VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -95,12 +95,12 @@ bool RendererPostProcess::createHDRRenderTarget(VkExtent2D swapchainExtent, VkIm
     subpass.pDepthStencilAttachment = &depthRef;
     
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+    depthAttachment.format = depthFormat;  // Use actual depth format (may have stencil)
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;  // Store depth for potential later use
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;  // Clear stencil for shadow volumes
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;  // Store stencil results
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     

@@ -117,7 +117,7 @@ void Renderer::renderShadowMap(VkCommandBuffer cmd) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline_);
     VkDeviceSize offs = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &cityVertexBuffer_, &offs);
-    vkCmdBindIndexBuffer(cmd, cityIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(cmd, cityIndexBuffer_, 0, VK_INDEX_TYPE_UINT32);  // Changed from UINT16 to UINT32
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, 1, &descriptorSets_[0], 0, nullptr);
     vkCmdDrawIndexed(cmd, cityIndexCount_, 1, 0, 0, 0);
     

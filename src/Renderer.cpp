@@ -57,6 +57,7 @@ bool Renderer::initialize(GLFWwindow* window) {
     // Create pipelines (they use hdrRenderPass_)
     if (!createDescriptorSetLayout()) return false;
     if (!createPipeline()) return false;
+    if (!createPipelineWireframe()) return false;  // Wireframe version for debug mode
     if (!createBloomTextures()) return false;
     if (!createPostProcessingPipeline()) return false;
     if (!createPostProcessingDescriptorSet()) return false;
@@ -67,20 +68,20 @@ bool Renderer::initialize(GLFWwindow* window) {
     gen->setGridSpacing(8.0f);
     gen->setChunkSize(50.0f);
     
-    // Generate initial chunks around starting camera position
-    // Camera starts at (0, 100, -150), so generate chunks around origin
-    for (int x = -2; x <= 2; ++x) {
-        for (int z = -2; z <= 2; ++z) {
-            gen->generateChunk(x, z, 42);
-            activeChunks_.insert(std::make_pair(x, z));
-        }
-    }
+    // Use the chunk system from the start - let updateChunks() generate initial chunks
+    // based on the camera's starting position (0, 100, -150)
+    updateChunks();
     
     if (!loadTextures()) return false;
     if (!loadNeonTextures()) return false;
+    
+    // Build geometry from the initial chunks
     if (!createCityGeometry()) return false;
     if (!createNeonGeometry()) return false;
+    if (!createGroundGeometry()) return false;
+    if (!createShadowVolumeGeometry()) return false;
     if (!createNeonPipeline()) return false;
+    if (!createShadowVolumePipeline()) return false;
     if (!createShadowMapResources()) return false;
     if (!createUniformBuffers()) return false;
     if (!createDescriptorPoolAndSets()) return false;
@@ -101,6 +102,18 @@ bool Renderer::initialize(GLFWwindow* window) {
     
     // Initialize camera vectors based on initial yaw and pitch
     updateCameraVectors();
+    
+    // Initialize debug overlay resources
+    if (!createDebugOverlayResources()) {
+        printf("Warning: Failed to create debug overlay resources\n");
+        // Don't fail initialization, just warn
+    }
+    
+    // Initialize chunk visualization
+    if (!createDebugChunkVisualization()) {
+        printf("Warning: Failed to create debug chunk visualization\n");
+        // Don't fail initialization, just warn
+    }
     
     return true;
 }
@@ -163,6 +176,26 @@ void Renderer::shutdown() {
         if (hdrColorMemory_) vkFreeMemory(device_, hdrColorMemory_, nullptr);
         if (hdrRenderPass_) vkDestroyRenderPass(device_, hdrRenderPass_, nullptr);
 
+        // Clean up debug overlay resources
+        if (debugTextPipeline_) vkDestroyPipeline(device_, debugTextPipeline_, nullptr);
+        if (debugTextPipelineLayout_) vkDestroyPipelineLayout(device_, debugTextPipelineLayout_, nullptr);
+        if (debugTextDescriptorPool_) vkDestroyDescriptorPool(device_, debugTextDescriptorPool_, nullptr);
+        if (debugTextDescriptorLayout_) vkDestroyDescriptorSetLayout(device_, debugTextDescriptorLayout_, nullptr);
+        if (debugTextVertexBuffer_) vkDestroyBuffer(device_, debugTextVertexBuffer_, nullptr);
+        if (debugTextVertexMemory_) vkFreeMemory(device_, debugTextVertexMemory_, nullptr);
+        if (debugTextIndexBuffer_) vkDestroyBuffer(device_, debugTextIndexBuffer_, nullptr);
+        if (debugTextIndexMemory_) vkFreeMemory(device_, debugTextIndexMemory_, nullptr);
+        if (debugFontSampler_) vkDestroySampler(device_, debugFontSampler_, nullptr);
+        if (debugFontView_) vkDestroyImageView(device_, debugFontView_, nullptr);
+        if (debugFontImage_) vkDestroyImage(device_, debugFontImage_, nullptr);
+        if (debugFontMemory_) vkFreeMemory(device_, debugFontMemory_, nullptr);
+        
+        // Clean up debug chunk visualization resources
+        if (debugChunkPipeline_) vkDestroyPipeline(device_, debugChunkPipeline_, nullptr);
+        if (debugChunkPipelineLayout_) vkDestroyPipelineLayout(device_, debugChunkPipelineLayout_, nullptr);
+        if (debugChunkVertexBuffer_) vkDestroyBuffer(device_, debugChunkVertexBuffer_, nullptr);
+        if (debugChunkVertexMemory_) vkFreeMemory(device_, debugChunkVertexMemory_, nullptr);
+
         // Clean up texture resources
         if (textureSampler_) vkDestroySampler(device_, textureSampler_, nullptr);
         for (int i = 0; i < kMaxBuildingTextures; ++i) {
@@ -177,6 +210,11 @@ void Renderer::shutdown() {
         if (neonArrayImage_) vkDestroyImage(device_, neonArrayImage_, nullptr);
         if (neonArrayMemory_) vkFreeMemory(device_, neonArrayMemory_, nullptr);
         if (neonPipeline_) vkDestroyPipeline(device_, neonPipeline_, nullptr);
+        
+        // Clean up city pipelines
+        if (graphicsPipeline_) vkDestroyPipeline(device_, graphicsPipeline_, nullptr);
+        if (graphicsPipelineWireframe_) vkDestroyPipeline(device_, graphicsPipelineWireframe_, nullptr);
+        if (pipelineLayout_) vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
 
         if (indexBuffer_) vkDestroyBuffer(device_, indexBuffer_, nullptr);
         if (indexBufferMemory_) vkFreeMemory(device_, indexBufferMemory_, nullptr);
@@ -207,6 +245,10 @@ void Renderer::waitIdle() {
 
 void Renderer::update(float deltaSeconds) {
     time_ += deltaSeconds;
+
+    if (debugOverlayVisible_) {
+        gatherDebugOverlayStats(deltaSeconds);
+    }
     
     // Process movement based on current input
     processMovement(deltaSeconds);
@@ -216,6 +258,11 @@ void Renderer::update(float deltaSeconds) {
     
     // Rebuild geometry if chunks changed
     rebuildGeometryIfNeeded();
+    
+    // Update debug chunk visualization if debug mode is enabled
+    if (debugVisualizationMode_ && debugChunkPipeline_) {
+        updateDebugChunkGeometry();
+    }
     
     checkShaderReload();
 }
@@ -273,7 +320,7 @@ void Renderer::drawFrame() {
     ubo.fogColor[0] = fogColor_.x;
     ubo.fogColor[1] = fogColor_.y;
     ubo.fogColor[2] = fogColor_.z;
-    ubo.fogDensity = fogDensity_;
+    ubo.fogDensity = debugVisualizationMode_ ? 0.0f : fogDensity_;  // Disable fog in debug mode
     
     ubo.skyLightDir[0] = skyLightDir_.x;
     ubo.skyLightDir[1] = skyLightDir_.y;
@@ -284,31 +331,49 @@ void Renderer::drawFrame() {
     
     std::memcpy(uniformBuffers_[0].mapped, &ubo, sizeof(ubo));
     
-    // Update post-processing UBO
+    // Update post-processing UBO (disable effects in debug visualization mode for clearer wireframe view)
     if (postProcessingUBO_.mapped) {
         PostProcessingUBO ppUBO{};
-        ppUBO.exposure = exposure_;
-        ppUBO.bloomThreshold = bloomThreshold_;
-        ppUBO.bloomIntensity = bloomIntensity_;
-        ppUBO.fogHeightFalloff = fogHeightFalloff_;
-        ppUBO.fogHeightOffset = fogHeightOffset_;
-        ppUBO.vignetteStrength = vignetteStrength_;
-        ppUBO.vignetteRadius = vignetteRadius_;
-        ppUBO.grainStrength = grainStrength_;
-        ppUBO.contrast = contrast_;
-        ppUBO.saturation = saturation_;
-        ppUBO.colorTemperature = colorTemperature_;
-        ppUBO.lightShaftIntensity = lightShaftIntensity_;
-        ppUBO.lightShaftDensity = lightShaftDensity_;
+        if (debugVisualizationMode_) {
+            // Debug mode: bypass all effects for clear wireframe visualization
+            ppUBO.exposure = 1.0f;  // No tone mapping
+            ppUBO.bloomThreshold = 999.0f;  // No bloom
+            ppUBO.bloomIntensity = 0.0f;
+            ppUBO.fogHeightFalloff = 0.0f;  // No fog
+            ppUBO.fogHeightOffset = 0.0f;
+            ppUBO.vignetteStrength = 0.0f;  // No vignette
+            ppUBO.vignetteRadius = 1.0f;
+            ppUBO.grainStrength = 0.0f;  // No grain
+            ppUBO.contrast = 1.0f;  // No contrast adjustment
+            ppUBO.saturation = 1.0f;  // No saturation adjustment
+            ppUBO.colorTemperature = 0.5f;  // Neutral temperature
+            ppUBO.lightShaftIntensity = 0.0f;  // No light shafts
+            ppUBO.lightShaftDensity = 0.0f;
+        } else {
+            // Normal mode: use configured effects
+            ppUBO.exposure = exposure_;
+            ppUBO.bloomThreshold = bloomThreshold_;
+            ppUBO.bloomIntensity = bloomIntensity_;
+            ppUBO.fogHeightFalloff = fogHeightFalloff_;
+            ppUBO.fogHeightOffset = fogHeightOffset_;
+            ppUBO.vignetteStrength = vignetteStrength_;
+            ppUBO.vignetteRadius = vignetteRadius_;
+            ppUBO.grainStrength = grainStrength_;
+            ppUBO.contrast = contrast_;
+            ppUBO.saturation = saturation_;
+            ppUBO.colorTemperature = colorTemperature_;
+            ppUBO.lightShaftIntensity = lightShaftIntensity_;
+            ppUBO.lightShaftDensity = lightShaftDensity_;
+        }
         
         // Copy view and projection matrices for sun disk projection
         std::memcpy(ppUBO.view, &view[0][0], sizeof(float) * 16);
         std::memcpy(ppUBO.proj, &proj[0][0], sizeof(float) * 16);
         
-        // Copy sun world-space direction (normalized, points towards sun)
-        ppUBO.sunWorldDir[0] = skyLightDir_.x;
-        ppUBO.sunWorldDir[1] = skyLightDir_.y;
-        ppUBO.sunWorldDir[2] = skyLightDir_.z;
+        // Copy sun world-space direction as vector from scene to sun (invert light-to-scene dir)
+        ppUBO.sunWorldDir[0] = -skyLightDir_.x;
+        ppUBO.sunWorldDir[1] = -skyLightDir_.y;
+        ppUBO.sunWorldDir[2] = -skyLightDir_.z;
         ppUBO._pad = 0.0f;  // Padding
         
         std::memcpy(postProcessingUBO_.mapped, &ppUBO, sizeof(ppUBO));
@@ -339,18 +404,11 @@ void Renderer::drawFrame() {
     if (presentRes == VK_ERROR_OUT_OF_DATE_KHR || presentRes == VK_SUBOPTIMAL_KHR) {
         recreateSwapchain();
     }
+
+    if (debugOverlayVisible_) {
+        renderDebugOverlay();
+    }
 }
-
-// ---- Vulkan setup helpers (implementations kept compact) ----
-
-// Moved to RendererSwapchain.cpp
-
-
-// Moved to RendererPipelines.cpp
-
-// Moved to RendererPipelines.cpp
-
-// Moved to RendererVulkanCore.cpp
 
 bool Renderer::createDepthResources() {
     VkFormat depthFormat = findDepthFormat();
@@ -412,8 +470,6 @@ bool Renderer::createSyncObjects() {
            vkCreateFence(device_, &fi, nullptr, &inFlightFence_) == VK_SUCCESS;
 }
 
-// Moved to RendererVulkanCore.cpp
-
 bool Renderer::createVertexIndexBuffers() {
     // Cube vertices: position(x,y,z) + color(r,g,b)
     const float v[] = {
@@ -460,12 +516,6 @@ bool Renderer::createVertexIndexBuffers() {
     return true;
 }
 
-// Moved to RendererResources.cpp
-
-// Moved to RendererResources.cpp
-
-// Moved to RendererShadow.cpp
-
 void Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex) {
     VkCommandBufferBeginInfo bi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     vkBeginCommandBuffer(cmd, &bi);
@@ -503,21 +553,41 @@ void Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex) {
     hdrRP.clearValueCount = (uint32_t)clears.size(); hdrRP.pClearValues = clears.data();
     vkCmdBeginRenderPass(cmd, &hdrRP, VK_SUBPASS_CONTENTS_INLINE);
     
-    // Render city buildings to HDR
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline_);
+    // Render ground planes first (same pipeline as buildings)
+    VkPipeline cityPipeline = debugVisualizationMode_ ? graphicsPipelineWireframe_ : graphicsPipeline_;
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, cityPipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, 1, &descriptorSets_[0], 0, nullptr);
+    
+    if (groundIndexCount_ > 0) {
+        VkDeviceSize offs = 0;
+        vkCmdBindVertexBuffers(cmd, 0, 1, &groundVertexBuffer_, &offs);
+        vkCmdBindIndexBuffer(cmd, groundIndexBuffer_, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(cmd, groundIndexCount_, 1, 0, 0, 0);
+    }
+    
+    // Render city buildings to HDR (wireframe in debug visualization mode)
     VkDeviceSize offs = 0; 
     vkCmdBindVertexBuffers(cmd, 0, 1, &cityVertexBuffer_, &offs);
-    vkCmdBindIndexBuffer(cmd, cityIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, 1, &descriptorSets_[0], 0, nullptr);
+    vkCmdBindIndexBuffer(cmd, cityIndexBuffer_, 0, VK_INDEX_TYPE_UINT32);  // Changed from UINT16 to UINT32
     vkCmdDrawIndexed(cmd, cityIndexCount_, 1, 0, 0, 0);
     
-    // Render neon lights with premultiplied alpha blending to HDR
-    if (neonPipeline_ && neonIndexCount_ > 0) {
+    // Render shadow volumes (stencil-only rendering, skip in debug mode)
+    if (!debugVisualizationMode_ && shadowVolumesEnabled_) {
+        renderShadowVolumes(cmd);
+    }
+    
+    // Render neon lights with premultiplied alpha blending to HDR (skip in debug visualization mode)
+    if (!debugVisualizationMode_ && neonPipeline_ && neonIndexCount_ > 0) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, neonPipeline_);
         vkCmdBindVertexBuffers(cmd, 0, 1, &neonVertexBuffer_, &offs);
         vkCmdBindIndexBuffer(cmd, neonIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, 1, &descriptorSets_[0], 0, nullptr);
         vkCmdDrawIndexed(cmd, neonIndexCount_, 1, 0, 0, 0);
+    }
+    
+    // Render debug chunk boundaries in debug visualization mode
+    if (debugVisualizationMode_) {
+        renderDebugChunks(cmd);
     }
     
     vkCmdEndRenderPass(cmd);
@@ -550,12 +620,15 @@ void Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex) {
     // Render post-processing fullscreen quad
     renderPostProcessing(cmd, imageIndex);
     
+    // Render debug overlay if enabled
+    if (debugOverlayVisible_) {
+        renderDebugOverlayGraphical(cmd);
+    }
+    
     vkCmdEndRenderPass(cmd);
     
     vkEndCommandBuffer(cmd);
 }
-
-// Moved to RendererSwapchain.cpp
 
 void Renderer::checkShaderReload() {
     if (!shaderReloadEnabled_) return;
@@ -600,19 +673,10 @@ void Renderer::checkShaderReload() {
     }
 }
 
-// Moved to RendererPipelines.cpp
-
 void Renderer::toggleShaderReload() {
     shaderReloadEnabled_ = !shaderReloadEnabled_;
     printf("Shader hot reloading %s\n", shaderReloadEnabled_ ? "enabled" : "disabled");
 }
-
-// Moved to RendererGeometry.cpp
-
-// Moved to RendererResources.cpp
-
-// Moved to RendererResources.cpp
-// Moved to RendererResources.cpp
 
 bool Renderer::createHDRRenderTarget() {
     // Create HDR color image (RGBA16F for HDR)
@@ -670,12 +734,12 @@ bool Renderer::createHDRRenderTarget() {
     subpass.pDepthStencilAttachment = &depthRef;
     
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+    depthAttachment.format = findDepthFormat();  // Use actual depth format (may have stencil)
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;  // Store depth for potential later use
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;  // Clear stencil for shadow volumes
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;  // Store stencil results
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     
@@ -1114,6 +1178,15 @@ void Renderer::updateChunks() {
     int currentChunkX = static_cast<int>(std::floor(camX / chunkSize));
     int currentChunkZ = static_cast<int>(std::floor(camZ / chunkSize));
     
+    // Debug: Print camera chunk changes
+    static int lastChunkX = 999999;
+    static int lastChunkZ = 999999;
+    if (currentChunkX != lastChunkX || currentChunkZ != lastChunkZ) {
+        printf("Camera chunk: (%d, %d)\n", currentChunkX, currentChunkZ);
+        lastChunkX = currentChunkX;
+        lastChunkZ = currentChunkZ;
+    }
+    
     // Determine chunks to load and unload
     std::set<std::pair<int, int>> chunksToLoad;
     std::set<std::pair<int, int>> chunksToUnload;
@@ -1142,10 +1215,10 @@ void Renderer::updateChunks() {
         }
     }
     
-    // Find chunks to unload (outside unload distance)
-    for (auto it = activeChunks_.begin(); it != activeChunks_.end();) {
-        int x = it->first;
-        int z = it->second;
+    // Find chunks to unload (outside unload distance) - DON'T ERASE YET
+    for (const auto& chunkKey : activeChunks_) {
+        int x = chunkKey.first;
+        int z = chunkKey.second;
         float chunkCenterX = (x + 0.5f) * chunkSize;
         float chunkCenterZ = (z + 0.5f) * chunkSize;
         float dx = camX - chunkCenterX;
@@ -1153,24 +1226,35 @@ void Renderer::updateChunks() {
         float distSq = dx * dx + dz * dz;
         
         if (distSq > chunkUnloadDistance_ * chunkUnloadDistance_) {
-            chunksToUnload.insert(*it);
-            it = activeChunks_.erase(it);
-        } else {
-            ++it;
+            chunksToUnload.insert(chunkKey);
         }
     }
     
-    // Load new chunks
+    // SIMPLIFIED APPROACH: Never do full regeneration, just keep accumulating chunks
+    // and rebuild geometry as needed. This prevents thrashing and building loss.
+    // We'll only clear chunks when memory becomes an actual issue (not implemented yet).
+    static size_t lastUnloadCount = 0;
+    if (!chunksToUnload.empty() && chunksToUnload.size() != lastUnloadCount) {
+        printf("⚠️  Would unload %zu chunks, but keeping them to prevent thrashing (total active: %zu)\n", 
+               chunksToUnload.size(), activeChunks_.size());
+        lastUnloadCount = chunksToUnload.size();
+        // Don't actually unload anything - just keep growing the city
+        // Future optimization: implement proper per-chunk removal without full regeneration
+    }
+    
+    // Load new chunks (simple case - no index corruption when only adding)
+    if (!chunksToLoad.empty()) {
+        printf("📍 Loading %zu new chunks (current total: %zu buildings, %zu active chunks)\n", 
+               chunksToLoad.size(), gen->getBuildings().size(), activeChunks_.size());
+    }
     for (const auto& chunkKey : chunksToLoad) {
+        printf("+ Chunk (%d, %d)\n", chunkKey.first, chunkKey.second);
         gen->generateChunk(chunkKey.first, chunkKey.second, 42);
         activeChunks_.insert(chunkKey);
         geometryNeedsRebuild_ = true;
     }
-    
-    // Unload distant chunks
-    for (const auto& chunkKey : chunksToUnload) {
-        gen->removeChunk(chunkKey.first, chunkKey.second);
-        geometryNeedsRebuild_ = true;
+    if (!chunksToLoad.empty()) {
+        printf("✅ After loading: %zu buildings total\n", gen->getBuildings().size());
     }
 }
 
@@ -1178,6 +1262,9 @@ void Renderer::rebuildGeometryIfNeeded() {
     if (!geometryNeedsRebuild_) return;
     
     geometryNeedsRebuild_ = false;
+    
+    CityGenerator* gen = static_cast<CityGenerator*>(cityGenerator_);
+    printf("🔨 Rebuild: %zu buildings\n", gen->getBuildings().size());
     
     // Wait for GPU to finish before rebuilding
     vkDeviceWaitIdle(device_);
@@ -1217,12 +1304,181 @@ void Renderer::rebuildGeometryIfNeeded() {
         neonIndexBufferMemory_ = VK_NULL_HANDLE;
     }
     
+    if (groundVertexBuffer_) {
+        vkDestroyBuffer(device_, groundVertexBuffer_, nullptr);
+        groundVertexBuffer_ = VK_NULL_HANDLE;
+    }
+    if (groundVertexBufferMemory_) {
+        vkFreeMemory(device_, groundVertexBufferMemory_, nullptr);
+        groundVertexBufferMemory_ = VK_NULL_HANDLE;
+    }
+    if (groundIndexBuffer_) {
+        vkDestroyBuffer(device_, groundIndexBuffer_, nullptr);
+        groundIndexBuffer_ = VK_NULL_HANDLE;
+    }
+    if (groundIndexBufferMemory_) {
+        vkFreeMemory(device_, groundIndexBufferMemory_, nullptr);
+        groundIndexBufferMemory_ = VK_NULL_HANDLE;
+    }
+    
     // Rebuild geometry
     if (!createCityGeometry()) {
         printf("Failed to rebuild city geometry\n");
     }
     if (!createNeonGeometry()) {
         printf("Failed to rebuild neon geometry\n");
+    }
+    if (!createGroundGeometry()) {
+        printf("Failed to rebuild ground geometry\n");
+    }
+    if (!createShadowVolumeGeometry()) {
+        printf("Failed to rebuild shadow volume geometry\n");
+    }
+}
+
+void Renderer::gatherDebugOverlayStats(float deltaSeconds) {
+    // Update frame times circular buffer and compute a smoothed FPS
+    frameTimes_[frameTimeIndex_++ % 128] = deltaSeconds;
+    if (frameTimeIndex_ > 128) frameTimeIndex_ = 0;
+    float avg = 0.0f;
+    for (float t : frameTimes_) avg += t;
+    avg /= 128.0f;
+    debug_fpsSmoothed_ = avg > 0.00001f ? 1.0f / avg : 0.0f;
+}
+
+void Renderer::renderDebugOverlay() {
+    // This is now just a stub - actual rendering happens in renderDebugOverlayGraphical
+    // which is called from the command buffer recording
+}
+
+void Renderer::renderDebugOverlayGraphical(VkCommandBuffer cmd) {
+    if (!debugTextPipeline_) return; // Not initialized yet
+    
+    // Build overlay text
+    char overlayText[2048];
+    
+    // Color code FPS (using special control characters)
+    const char* fpsColor = debug_fpsSmoothed_ >= 60.0f ? "\x1F" : // Green
+                          (debug_fpsSmoothed_ >= 30.0f ? "\x1E" : "\x1D"); // Yellow : Red
+    
+    snprintf(overlayText, sizeof(overlayText),
+        "PROCEDURAL CITY - DEBUG\n"
+        "=======================\n"
+        "%sFPS: %.1f\x1C\n"  // Color coded FPS, then reset to white
+        "Polygons: %u\n"
+        "Chunks: %zu active\n"
+        "Buildings: %zu\n"
+        "Neon Lights: %zu\n"
+        "Camera: (%.1f, %.1f, %.1f)\n"
+        "Chunk: (%d, %d)\n",
+        fpsColor,
+        debug_fpsSmoothed_,
+        cityIndexCount_,
+        activeChunks_.size(),
+        static_cast<CityGenerator*>(cityGenerator_)->getBuildings().size(),
+        static_cast<CityGenerator*>(cityGenerator_)->getNeonLights().size(),
+        cameraPos_.x, cameraPos_.y, cameraPos_.z,
+        int(std::floor(cameraPos_.x / static_cast<CityGenerator*>(cityGenerator_)->getChunkSize())),
+        int(std::floor(cameraPos_.z / static_cast<CityGenerator*>(cityGenerator_)->getChunkSize()))
+    );
+    
+    // Update geometry for this frame's text
+    updateDebugTextGeometry(overlayText, -0.95f, 0.95f, 0.04f);
+    
+    if (debugTextIndexCount_ == 0) return;
+    
+    // Render text
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, debugTextPipeline_);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, debugTextPipelineLayout_, 
+                           0, 1, &debugTextDescriptorSet_, 0, nullptr);
+    
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(cmd, 0, 1, &debugTextVertexBuffer_, &offset);
+    vkCmdBindIndexBuffer(cmd, debugTextIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdDrawIndexed(cmd, debugTextIndexCount_, 1, 0, 0, 0);
+}
+
+void Renderer::updateDebugTextGeometry(const char* text, float startX, float startY, float scale) {
+    std::vector<float> vertices;
+    std::vector<uint16_t> indices;
+    
+    float x = startX;
+    float y = startY;
+    float charWidth = scale;
+    float charHeight = scale * 1.5f; // Slightly taller for readability
+    
+    uint16_t vertexOffset = 0;
+    glm::vec3 currentColor(1.0f, 1.0f, 1.0f); // Default white
+    
+    for (const char* c = text; *c != '\0'; ++c) {
+        if (*c == '\n') {
+            x = startX;
+            y -= charHeight * 1.2f; // Line spacing
+            continue;
+        }
+        
+        // Handle color codes (special characters)
+        if (*c == '\x1C') { // Reset to white
+            currentColor = glm::vec3(1.0f, 1.0f, 1.0f);
+            continue;
+        } else if (*c == '\x1D') { // Red
+            currentColor = glm::vec3(1.0f, 0.3f, 0.3f);
+            continue;
+        } else if (*c == '\x1E') { // Yellow
+            currentColor = glm::vec3(1.0f, 1.0f, 0.3f);
+            continue;
+        } else if (*c == '\x1F') { // Green
+            currentColor = glm::vec3(0.3f, 1.0f, 0.3f);
+            continue;
+        }
+        
+        // Calculate texture coordinates for this character in font atlas
+        // Assuming 16x16 character grid (256 ASCII characters)
+        int charCode = (unsigned char)*c;
+        float texX = (charCode % 16) / 16.0f;
+        float texY = (charCode / 16) / 16.0f;
+        float texW = 1.0f / 16.0f;
+        float texH = 1.0f / 16.0f;
+        
+        // Create quad for this character
+        // Format: pos(2) + texCoord(2) + color(3) = 7 floats per vertex
+        // Note: y decreases downward, charHeight is positive
+        // Flip V coordinate: bottom of texture (texY + texH) goes to top of quad (y)
+        // Flip U coordinate horizontally to fix mirrored text
+        vertices.insert(vertices.end(), {
+            x,             y,              texX + texW,  texY + texH,  currentColor.r, currentColor.g, currentColor.b,
+            x + charWidth, y,              texX,         texY + texH,  currentColor.r, currentColor.g, currentColor.b,
+            x + charWidth, y - charHeight, texX,         texY,         currentColor.r, currentColor.g, currentColor.b,
+            x,             y - charHeight, texX + texW,  texY,         currentColor.r, currentColor.g, currentColor.b,
+        });
+        
+        indices.insert(indices.end(), {
+            static_cast<uint16_t>(vertexOffset + 0), static_cast<uint16_t>(vertexOffset + 1), static_cast<uint16_t>(vertexOffset + 2),
+            static_cast<uint16_t>(vertexOffset + 2), static_cast<uint16_t>(vertexOffset + 3), static_cast<uint16_t>(vertexOffset + 0),
+        });
+        
+        vertexOffset += 4;
+        x += charWidth * 0.6f; // Character spacing (monospace)
+    }
+    
+    debugTextIndexCount_ = static_cast<uint32_t>(indices.size());
+    
+    if (debugTextIndexCount_ == 0) return;
+    
+    // Update vertex buffer
+    if (debugTextVertexBuffer_) {
+        void* data;
+        vkMapMemory(device_, debugTextVertexMemory_, 0, vertices.size() * sizeof(float), 0, &data);
+        memcpy(data, vertices.data(), vertices.size() * sizeof(float));
+        vkUnmapMemory(device_, debugTextVertexMemory_);
+    }
+    
+    // Update index buffer  
+    if (debugTextIndexBuffer_) {
+        void* data;
+        vkMapMemory(device_, debugTextIndexMemory_, 0, indices.size() * sizeof(uint16_t), 0, &data);
+        memcpy(data, indices.data(), indices.size() * sizeof(uint16_t));
+        vkUnmapMemory(device_, debugTextIndexMemory_);
     }
 }
 

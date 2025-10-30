@@ -16,7 +16,7 @@ public:
     RendererPostProcess(VkDevice device, VkPhysicalDevice physicalDevice, uint32_t (*findMemoryType)(uint32_t typeFilter, VkMemoryPropertyFlags properties));
     ~RendererPostProcess();
 
-    bool createHDRRenderTarget(VkExtent2D swapchainExtent, VkImageView depthImageView, VkRenderPass& hdrRenderPass, VkFramebuffer& hdrFramebuffer);
+    bool createHDRRenderTarget(VkExtent2D swapchainExtent, VkImageView depthImageView, VkFormat depthFormat, VkRenderPass& hdrRenderPass, VkFramebuffer& hdrFramebuffer);
     bool createBloomTextures(VkExtent2D swapchainExtent, VkRenderPass& bloomRenderPass);
     bool createPostProcessingPipeline(VkExtent2D swapchainExtent, VkRenderPass renderPass, VkSampler textureSampler, VkPipelineLayout& postProcessingLayout, VkDescriptorSetLayout& postProcessingDescriptorLayout, VkPipeline& postProcessingPipeline);
     bool createPostProcessingDescriptorSet(VkDescriptorSetLayout descriptorLayout, VkSampler textureSampler);

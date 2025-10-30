@@ -36,6 +36,7 @@ void CityGenerator::generateChunk(int chunkX, int chunkZ, int baseSeed) {
     // Check if chunk already exists
     auto chunkKey = std::make_pair(chunkX, chunkZ);
     if (chunkData_.find(chunkKey) != chunkData_.end()) {
+        printf("  [SKIP] Chunk (%d, %d) already exists\n", chunkX, chunkZ);
         return; // Chunk already generated
     }
     
@@ -55,19 +56,34 @@ void CityGenerator::generateChunk(int chunkX, int chunkZ, int baseSeed) {
     float chunkWorldX = chunkX * chunkSize_;
     float chunkWorldZ = chunkZ * chunkSize_;
     
-    // Generate buildings within this chunk
-    for (int x = 0; x < buildingsPerChunk_; ++x) {
-        for (int z = 0; z < buildingsPerChunk_; ++z) {
-            // Skip some grid positions for density variation
-            if (neonDist_(rng_) > buildingDensity_) continue;
+    // Generate buildings on a 5x5 grid with density variation
+    // Guaranteed minimum: center building always spawns
+    const int gridCount = 5;  // 5x5 grid
+    float cellSize = chunkSize_ / gridCount;
+    
+    int skippedCount = 0;
+    for (int x = 0; x < gridCount; ++x) {
+        for (int z = 0; z < gridCount; ++z) {
+            // Always place center building, others based on density
+            bool isCenter = (x == 2 && z == 2);
+            if (!isCenter && neonDist_(rng_) > buildingDensity_) {
+                skippedCount++;
+                continue;
+            }
             
-            // Position relative to chunk center
-            float localX = (x * gridSpacing_) - (chunkSize_ * 0.5f);
-            float localZ = (z * gridSpacing_) - (chunkSize_ * 0.5f);
+            // Position: center of cell with small random offset
+            float localX = (x + 0.5f) * cellSize;
+            float localZ = (z + 0.5f) * cellSize;
             
-            // Calculate world position (add city center offset to match old generateCity behavior)
-            float worldX = chunkWorldX + localX + cityWidth_ * 0.5f;
-            float worldZ = chunkWorldZ + localZ + cityDepth_ * 0.5f;
+            // Add small random offset (±15% of cell size) for variety
+            if (!isCenter) {  // Keep center building perfectly centered
+                localX += (neonDist_(rng_) - 0.5f) * cellSize * 0.3f;
+                localZ += (neonDist_(rng_) - 0.5f) * cellSize * 0.3f;
+            }
+            
+            // World coordinates
+            float worldX = chunkWorldX + localX;
+            float worldZ = chunkWorldZ + localZ;
             
             glm::vec2 gridPos(worldX, worldZ);
             generateBuilding(gridPos);
@@ -84,57 +100,32 @@ void CityGenerator::generateChunk(int chunkX, int chunkZ, int baseSeed) {
     }
     chunkData_[chunkKey] = chunkData;
     
-    printf("Generated chunk (%d, %d): %zu buildings, %zu neon lights\n", 
-           chunkX, chunkZ, chunkData.buildingIndices.size(), chunkData.neonIndices.size());
+    // Debug: Print how many buildings were generated in this chunk
+    printf("  Chunk (%d, %d): %zu buildings\n", chunkX, chunkZ, chunkData.buildingIndices.size());
 }
 
 void CityGenerator::removeChunk(int chunkX, int chunkZ) {
+    // Simply clear the chunk from tracking
+    // The actual cleanup happens in clearAllChunks()
     auto chunkKey = std::make_pair(chunkX, chunkZ);
-    auto it = chunkData_.find(chunkKey);
-    if (it == chunkData_.end()) {
-        return; // Chunk doesn't exist
-    }
-    
-    // Remove buildings and neons in reverse order to maintain indices
-    ChunkData& chunkData = it->second;
-    
-    // Remove neon lights first (they come after buildings in vector)
-    for (auto it = chunkData.neonIndices.rbegin(); it != chunkData.neonIndices.rend(); ++it) {
-        size_t index = *it;
-        if (index < neonLights_.size()) {
-            neonLights_.erase(neonLights_.begin() + index);
-        }
-    }
-    
-    // Remove buildings
-    for (auto it = chunkData.buildingIndices.rbegin(); it != chunkData.buildingIndices.rend(); ++it) {
-        size_t index = *it;
-        if (index < buildings_.size()) {
-            buildings_.erase(buildings_.begin() + index);
-        }
-    }
-    
-    // Remove chunk from tracking
-    chunkData_.erase(it);
-    
-    printf("Removed chunk (%d, %d)\n", chunkX, chunkZ);
-    
-    // Note: Removing chunks invalidates indices of later chunks
-    // For simplicity, we'll rebuild all geometry when chunks change
-    // A more efficient approach would update indices incrementally
+    chunkData_.erase(chunkKey);
+}
+
+void CityGenerator::clearAllChunks() {
+    buildings_.clear();
+    neonLights_.clear();
+    chunkData_.clear();
 }
 
 void CityGenerator::generateBuilding(glm::vec2 gridPos) {
     Building building;
     
-    // Position with some randomness
-    float offsetX = (neonDist_(rng_) - 0.5f) * gridSpacing_ * 0.8f;
-    float offsetZ = (neonDist_(rng_) - 0.5f) * gridSpacing_ * 0.8f;
-    
+    // For infinite world, use gridPos directly (chunk system handles world positioning)
+    // No random offset for debugging - building should be exactly at gridPos
     building.position = glm::vec3(
-        gridPos.x + offsetX - cityWidth_ * 0.5f,
+        gridPos.x,
         0.0f,
-        gridPos.y + offsetZ - cityDepth_ * 0.5f
+        gridPos.y
     );
     
     // Generate asymmetrical size
@@ -178,43 +169,105 @@ void CityGenerator::addNeonLights(Building& building) {
         NeonLight light;
         
         // Choose a random building part to attach the neon to (trunk or branch)
-        // This ensures neons appear on all parts of the building, not just the trunk
         if (building.parts.empty()) continue;
         const BuildingPart& part = building.parts[static_cast<size_t>(neonDist_(rng_) * building.parts.size())];
         
-        // Calculate absolute position of this part (matching how it's rendered)
+        // Calculate absolute position of this part
         glm::vec3 partAbsPos = building.position + part.position;
         
-        // Position lights on building facades
+        // Choose which face to place the neon on
         float side = neonDist_(rng_);
+        float wallWidth, wallHeight;
+        const float offset = 0.05f;  // Small offset to prevent z-fighting
+        
         if (side < 0.25f) {
-            // Front face (positive Z)
-            light.position = glm::vec3(
-                partAbsPos.x + (neonDist_(rng_) - 0.5f) * part.size.x,
-                partAbsPos.y + neonDist_(rng_) * part.size.y,
-                partAbsPos.z + part.size.z * 0.5f
-            );
+            // Front face (positive Z) - width x height
+            light.face = 0;
+            wallWidth = part.size.x;
+            wallHeight = part.size.y;
         } else if (side < 0.5f) {
-            // Back face (negative Z)
-            light.position = glm::vec3(
-                partAbsPos.x + (neonDist_(rng_) - 0.5f) * part.size.x,
-                partAbsPos.y + neonDist_(rng_) * part.size.y,
-                partAbsPos.z - part.size.z * 0.5f
-            );
+            // Back face (negative Z) - width x height
+            light.face = 1;
+            wallWidth = part.size.x;
+            wallHeight = part.size.y;
         } else if (side < 0.75f) {
-            // Left face (negative X)
-            light.position = glm::vec3(
-                partAbsPos.x - part.size.x * 0.5f,
-                partAbsPos.y + neonDist_(rng_) * part.size.y,
-                partAbsPos.z + (neonDist_(rng_) - 0.5f) * part.size.z
-            );
+            // Left face (negative X) - depth x height
+            light.face = 2;
+            wallWidth = part.size.z;
+            wallHeight = part.size.y;
         } else {
-            // Right face (positive X)
-            light.position = glm::vec3(
-                partAbsPos.x + part.size.x * 0.5f,
-                partAbsPos.y + neonDist_(rng_) * part.size.y,
-                partAbsPos.z + (neonDist_(rng_) - 0.5f) * part.size.z
-            );
+            // Right face (positive X) - depth x height
+            light.face = 3;
+            wallWidth = part.size.z;
+            wallHeight = part.size.y;
+        }
+        
+        // Generate base size with distribution (most small, some huge)
+        float baseSize;
+        float sizeRoll = neonDist_(rng_);
+        if (sizeRoll < 0.6f) {
+            baseSize = 0.3f + neonDist_(rng_) * 0.5f;  // 0.3-0.8
+        } else if (sizeRoll < 0.85f) {
+            baseSize = 0.8f + neonDist_(rng_) * 1.2f;  // 0.8-2.0
+        } else if (sizeRoll < 0.95f) {
+            baseSize = 2.0f + neonDist_(rng_) * 2.0f;  // 2.0-4.0
+        } else {
+            baseSize = 4.0f + neonDist_(rng_) * 4.0f;  // 4.0-8.0 (billboard)
+        }
+        
+        // Random aspect ratio (some wide, some tall, some square)
+        float aspectRatio = 0.5f + neonDist_(rng_) * 1.5f;  // 0.5 to 2.0
+        light.width = baseSize * aspectRatio;
+        light.height = baseSize;
+        
+        // Clamp to wall dimensions (leave 10% margin on each side)
+        float maxWidth = wallWidth * 0.8f;
+        float maxHeight = wallHeight * 0.8f;
+        if (light.width > maxWidth) {
+            float scale = maxWidth / light.width;
+            light.width = maxWidth;
+            light.height *= scale;
+        }
+        if (light.height > maxHeight) {
+            float scale = maxHeight / light.height;
+            light.height = maxHeight;
+            light.width *= scale;
+        }
+        
+        // Position on the wall (centered with some randomness)
+        float xOffset = (neonDist_(rng_) - 0.5f) * (wallWidth - light.width);
+        float yOffset = neonDist_(rng_) * (wallHeight - light.height) + light.height * 0.5f;
+        
+        // Set position based on face, with proper offset to avoid z-fighting
+        switch (light.face) {
+            case 0: // Front (+Z)
+                light.position = glm::vec3(
+                    partAbsPos.x + xOffset,
+                    partAbsPos.y + yOffset,
+                    partAbsPos.z + part.size.z * 0.5f + offset
+                );
+                break;
+            case 1: // Back (-Z)
+                light.position = glm::vec3(
+                    partAbsPos.x + xOffset,
+                    partAbsPos.y + yOffset,
+                    partAbsPos.z - part.size.z * 0.5f - offset
+                );
+                break;
+            case 2: // Left (-X)
+                light.position = glm::vec3(
+                    partAbsPos.x - part.size.x * 0.5f - offset,
+                    partAbsPos.y + yOffset,
+                    partAbsPos.z + xOffset
+                );
+                break;
+            case 3: // Right (+X)
+                light.position = glm::vec3(
+                    partAbsPos.x + part.size.x * 0.5f + offset,
+                    partAbsPos.y + yOffset,
+                    partAbsPos.z + xOffset
+                );
+                break;
         }
         
         // Generate neon colors (warm tones with some blues)

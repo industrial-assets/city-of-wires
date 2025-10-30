@@ -33,29 +33,20 @@ float calculatePulse(float time) {
 }
 
 void main() {
+    // Sample the neon texture array using vUV and vTexIndex
     int idx = max(0, vTexIndex);
-    vec4 tex = texture(neonTex, vec3(vUV, float(idx)));
-    
-    // Use texture pattern more prominently
-    vec3 baseNeonColor = vColor * vIntensity * 0.7; // Reduce base intensity
+    vec2 uv = clamp(vUV, 0.0, 1.0);
+    vec4 tex = texture(neonTex, vec3(uv, float(idx)));
+
+    // Base color from vertex, modulated by intensity and texture
     float pulse = calculatePulse(ubo.time);
-    
-    // Mix texture with color more evenly
-    vec3 neonColor = mix(baseNeonColor, baseNeonColor * tex.rgb * 1.2, 0.6);
-    neonColor *= pulse;
-    
-    // Sharper cutout - less volumetric glow
-    float cut = step(0.1, max(max(tex.r, tex.g), tex.b)); // Higher threshold for cleaner edges
+    vec3 base = vColor * vIntensity * pulse;
+    vec3 color = base * tex.rgb;
+
+    // Alpha from texture with slight distance falloff
     float distance = length(vWorldPos - ubo.cameraPos);
-    float distanceAlpha = 1.0 / (1.0 + distance * 0.02); // Subtle distance fade
-    
-    // Reduce alpha contribution from bloom - make them more visible as flat planes
-    float alpha = cut * tex.a * (0.8 + distanceAlpha * 0.2);
-    
-    // Add slight glow only at edges, not entire quad
-    float edgeGlow = 1.0 - smoothstep(0.3, 1.0, max(abs(vUV.x - 0.5), abs(vUV.y - 0.5))) * 2.0;
-    alpha = mix(alpha, alpha * 1.15, edgeGlow * 0.3);
-    
-    vec3 finalColor = neonColor;
-    outColor = vec4(finalColor, alpha);
+    float distanceAlpha = 1.0 / (1.0 + distance * 0.02);
+    float alpha = tex.a * distanceAlpha;
+
+    outColor = vec4(color, alpha);
 }

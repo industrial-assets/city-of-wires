@@ -59,12 +59,33 @@ void Renderer::cleanupSwapchain() {
 
 void Renderer::recreateSwapchain() {
     vkDeviceWaitIdle(device_);
+    
+    // Cleanup debug visualization pipelines (they have viewport tied to old extent)
+    if (debugTextPipeline_) {
+        vkDestroyPipeline(device_, debugTextPipeline_, nullptr);
+        debugTextPipeline_ = VK_NULL_HANDLE;
+    }
+    if (debugChunkPipeline_) {
+        vkDestroyPipeline(device_, debugChunkPipeline_, nullptr);
+        debugChunkPipeline_ = VK_NULL_HANDLE;
+    }
+    
     cleanupSwapchain();
     createSwapchain();
     createImageViews();
     createRenderPass();
     createDepthResources();
     createFramebuffers();
+    
+    // Recreate debug visualization pipelines with new extent
+    // Note: These functions are idempotent - they'll skip creating buffers/layouts if they exist
+    if (debugTextPipelineLayout_ != VK_NULL_HANDLE) {
+        createDebugTextPipeline();
+    }
+    if (debugChunkPipelineLayout_ != VK_NULL_HANDLE) {
+        createDebugChunkVisualization();
+    }
+    
     // Command buffers sized to framebuffers already
 }
 

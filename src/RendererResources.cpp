@@ -110,41 +110,69 @@ bool Renderer::loadTextures() {
 }
 
 bool Renderer::loadNeonTextures() {
-    // Create a simple procedural neon texture array
-    const int width = 64;
-    const int height = 64;
-    const int layers = 4;
-    std::vector<uint8_t> pixels(width * height * layers * 4);
-    
-    for (int layer = 0; layer < layers; ++layer) {
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                int idx = (layer * width * height + y * width + x) * 4;
-                // Create a glowing pattern with different colors per layer
-                float ratioX = (x / (float)width - 0.5f) * 2.0f;
-                float ratioY = (y / (float)height - 0.5f) * 2.0f;
-                float dist = sqrt(ratioX * ratioX + ratioY * ratioY);
-                float intensity = std::max(0.0f, 1.0f - dist);
-                intensity = pow(intensity, 2.0f);
-                
-                // Different colors per layer
-                float r = (layer == 0) ? 1.0f : (layer == 1) ? 0.0f : (layer == 2) ? 0.5f : 1.0f;
-                float g = (layer == 0) ? 0.0f : (layer == 1) ? 1.0f : (layer == 2) ? 0.5f : 0.5f;
-                float b = (layer == 0) ? 0.0f : (layer == 1) ? 0.0f : (layer == 2) ? 1.0f : 0.0f;
-                
-                pixels[idx + 0] = (uint8_t)(r * intensity * 255);
-                pixels[idx + 1] = (uint8_t)(g * intensity * 255);
-                pixels[idx + 2] = (uint8_t)(b * intensity * 255);
-                pixels[idx + 3] = (uint8_t)(intensity * 255);
-            }
+    // Load neon textures from disk and create a 2D array texture
+    std::vector<std::string> neonFiles = {
+        "textures/neon/neon_01.png",
+        "textures/neon/neon_02.png"
+    };
+
+    struct Loaded { int w; int h; std::vector<uint8_t> pixels; };
+    std::vector<Loaded> images;
+
+#if defined(__APPLE__)
+    for (const auto& file : neonFiles) {
+        CFStringRef cfPath = CFStringCreateWithCString(kCFAllocatorDefault, file.c_str(), kCFStringEncodingUTF8);
+        if (!cfPath) continue;
+        CFURLRef url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, cfPath, kCFURLPOSIXPathStyle, false);
+        CFRelease(cfPath);
+        if (!url) continue;
+        CGImageSourceRef src = CGImageSourceCreateWithURL(url, nullptr);
+        CFRelease(url);
+        if (!src) continue;
+        CGImageRef img = CGImageSourceCreateImageAtIndex(src, 0, nullptr);
+        CFRelease(src);
+        if (!img) continue;
+
+        const size_t w = CGImageGetWidth(img);
+        const size_t h = CGImageGetHeight(img);
+        std::vector<uint8_t> px(w * h * 4);
+        CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+        CGContextRef ctx = CGBitmapContextCreate(px.data(), w, h, 8, w * 4, cs,
+            static_cast<CGBitmapInfo>(kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big));
+        CGColorSpaceRelease(cs);
+        CGContextDrawImage(ctx, CGRectMake(0, 0, w, h), img);
+        CGContextRelease(ctx);
+        CGImageRelease(img);
+
+        images.push_back({ static_cast<int>(w), static_cast<int>(h), std::move(px) });
+    }
+#endif
+
+    if (images.empty()) {
+        printf("Warning: No neon textures loaded.\n");
+        return false;
+    }
+
+    const int width = images[0].w;
+    const int height = images[0].h;
+    for (const auto& im : images) {
+        if (im.w != width || im.h != height) {
+            printf("Error: Neon textures must have identical dimensions.\n");
+            return false;
         }
     }
-    
-    // Create texture array image
+
+    const int layers = static_cast<int>(images.size());
+    std::vector<uint8_t> pixels(width * height * layers * 4);
+    for (int l = 0; l < layers; ++l) {
+        std::memcpy(pixels.data() + l * width * height * 4, images[l].pixels.data(), width * height * 4);
+    }
+
+    // Create array image
     VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
+    imageInfo.extent.width = static_cast<uint32_t>(width);
+    imageInfo.extent.height = static_cast<uint32_t>(height);
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = layers;
@@ -153,10 +181,8 @@ bool Renderer::loadNeonTextures() {
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.flags = VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
-    
     if (vkCreateImage(device_, &imageInfo, nullptr, &neonArrayImage_) != VK_SUCCESS) return false;
-    
+
     VkMemoryRequirements memReq;
     vkGetImageMemoryRequirements(device_, neonArrayImage_, &memReq);
     VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
@@ -164,104 +190,57 @@ bool Renderer::loadNeonTextures() {
     allocInfo.memoryTypeIndex = findMemoryType(memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (vkAllocateMemory(device_, &allocInfo, nullptr, &neonArrayMemory_) != VK_SUCCESS) return false;
     vkBindImageMemory(device_, neonArrayImage_, neonArrayMemory_, 0);
-    
-    // Create staging buffer to upload pixel data
-    VkBufferCreateInfo stagingBufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    stagingBufferInfo.size = pixels.size();
-    stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    // Staging buffer
+    VkDeviceSize bufferSize = pixels.size();
     VkBuffer stagingBuffer;
-    if (vkCreateBuffer(device_, &stagingBufferInfo, nullptr, &stagingBuffer) != VK_SUCCESS) return false;
-    
-    VkMemoryRequirements stagingMemReq;
-    vkGetBufferMemoryRequirements(device_, stagingBuffer, &stagingMemReq);
-    VkMemoryAllocateInfo stagingAllocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    stagingAllocInfo.allocationSize = stagingMemReq.size;
-    stagingAllocInfo.memoryTypeIndex = findMemoryType(stagingMemReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     VkDeviceMemory stagingMemory;
-    if (vkAllocateMemory(device_, &stagingAllocInfo, nullptr, &stagingMemory) != VK_SUCCESS) {
-        vkDestroyBuffer(device_, stagingBuffer, nullptr);
-        return false;
-    }
+    VkBufferCreateInfo bi{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bi.size = bufferSize; bi.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; bi.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    if (vkCreateBuffer(device_, &bi, nullptr, &stagingBuffer) != VK_SUCCESS) return false;
+    vkGetBufferMemoryRequirements(device_, stagingBuffer, &memReq);
+    allocInfo.allocationSize = memReq.size; allocInfo.memoryTypeIndex = findMemoryType(memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (vkAllocateMemory(device_, &allocInfo, nullptr, &stagingMemory) != VK_SUCCESS) return false;
     vkBindBufferMemory(device_, stagingBuffer, stagingMemory, 0);
-    
-    // Copy pixel data to staging buffer
-    void* data = nullptr;
-    if (vkMapMemory(device_, stagingMemory, 0, pixels.size(), 0, &data) != VK_SUCCESS) {
-        vkFreeMemory(device_, stagingMemory, nullptr);
-        vkDestroyBuffer(device_, stagingBuffer, nullptr);
-        return false;
-    }
-    std::memcpy(data, pixels.data(), pixels.size());
-    vkUnmapMemory(device_, stagingMemory);
-    
-    // Transfer image layout and copy data (using command buffer)
-    VkCommandBufferAllocateInfo cmdAllocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    cmdAllocInfo.commandPool = commandPool_;
-    cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmdAllocInfo.commandBufferCount = 1;
-    VkCommandBuffer cmd;
-    if (vkAllocateCommandBuffers(device_, &cmdAllocInfo, &cmd) != VK_SUCCESS) {
-        vkFreeMemory(device_, stagingMemory, nullptr);
-        vkDestroyBuffer(device_, stagingBuffer, nullptr);
-        return false;
-    }
-    
-    VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(cmd, &beginInfo);
-    
-    // Transition to transfer destination
+    void* data; if (vkMapMemory(device_, stagingMemory, 0, bufferSize, 0, &data) != VK_SUCCESS) return false; std::memcpy(data, pixels.data(), (size_t)bufferSize); vkUnmapMemory(device_, stagingMemory);
+
+    // Copy to image
+    VkCommandBufferAllocateInfo cai{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    cai.commandPool = commandPool_; cai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; cai.commandBufferCount = 1;
+    VkCommandBuffer cmd; if (vkAllocateCommandBuffers(device_, &cai, &cmd) != VK_SUCCESS) return false;
+    VkCommandBufferBeginInfo cbi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    cbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; vkBeginCommandBuffer(cmd, &cbi);
+
     VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = neonArrayImage_;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.layerCount = layers;
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; barrier.subresourceRange.levelCount = 1; barrier.subresourceRange.layerCount = layers;
+    barrier.srcAccessMask = 0; barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    
-    // Copy buffer to image
+
     VkBufferImageCopy region{};
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = layers;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0; region.imageSubresource.layerCount = layers;
     region.imageExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
     vkCmdCopyBufferToImage(cmd, stagingBuffer, neonArrayImage_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    
-    // Transition to shader read
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL; barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    
+
     vkEndCommandBuffer(cmd);
-    
-    VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmd;
-    vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphicsQueue_);
-    
+    VkSubmitInfo submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO }; submit.commandBufferCount = 1; submit.pCommandBuffers = &cmd;
+    vkQueueSubmit(graphicsQueue_, 1, &submit, VK_NULL_HANDLE); vkQueueWaitIdle(graphicsQueue_);
     vkFreeCommandBuffers(device_, commandPool_, 1, &cmd);
-    vkFreeMemory(device_, stagingMemory, nullptr);
-    vkDestroyBuffer(device_, stagingBuffer, nullptr);
-    
-    // Create image view for array
+    vkFreeMemory(device_, stagingMemory, nullptr); vkDestroyBuffer(device_, stagingBuffer, nullptr);
+
+    // View
     VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    viewInfo.image = neonArrayImage_;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-    viewInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.layerCount = layers;
+    viewInfo.image = neonArrayImage_; viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; viewInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; viewInfo.subresourceRange.levelCount = 1; viewInfo.subresourceRange.layerCount = layers;
     if (vkCreateImageView(device_, &viewInfo, nullptr, &neonArrayView_) != VK_SUCCESS) return false;
-    
+
     numNeonTextures_ = layers;
     return true;
 }

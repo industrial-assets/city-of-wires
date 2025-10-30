@@ -7,6 +7,25 @@
 namespace pcengine {
 
 void Renderer::processKeyboard(int key, int action) {
+    // Tab toggles debug overlay (metrics only)
+    if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+        debugOverlayVisible_ = !debugOverlayVisible_;
+        return;
+    }
+    
+    // ] toggles debug visualization mode (wireframe, chunk boxes, bypass effects)
+    if (key == GLFW_KEY_RIGHT_BRACKET && action == GLFW_PRESS) {
+        debugVisualizationMode_ = !debugVisualizationMode_;
+        return;
+    }
+    
+    // V toggles shadow volumes
+    if (key == GLFW_KEY_V && action == GLFW_PRESS) {
+        shadowVolumesEnabled_ = !shadowVolumesEnabled_;
+        printf("Shadow volumes: %s\n", shadowVolumesEnabled_ ? "enabled" : "disabled");
+        return;
+    }
+
     if (key >= 0 && key < 1024) {
         if (action == GLFW_PRESS) {
             keys_[key] = true;
@@ -92,12 +111,9 @@ void Renderer::processMovement(float deltaSeconds) {
         cameraPos_ += right * velocity;
     }
     
-    // Up/Down movement
+    // Up movement
     if (keys_[GLFW_KEY_SPACE]) {
         cameraPos_ += cameraUp_ * velocity;
-    }
-    if (keys_[GLFW_KEY_LEFT_SHIFT]) {
-        cameraPos_ -= cameraUp_ * velocity;
     }
 }
 

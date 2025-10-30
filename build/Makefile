@@ -335,6 +335,30 @@ src/RendererCamera.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.s
 .PHONY : src/RendererCamera.cpp.s
 
+src/RendererDebugOverlay.o: src/RendererDebugOverlay.cpp.o
+.PHONY : src/RendererDebugOverlay.o
+
+# target to build an object file
+src/RendererDebugOverlay.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererDebugOverlay.cpp.o
+.PHONY : src/RendererDebugOverlay.cpp.o
+
+src/RendererDebugOverlay.i: src/RendererDebugOverlay.cpp.i
+.PHONY : src/RendererDebugOverlay.i
+
+# target to preprocess a source file
+src/RendererDebugOverlay.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererDebugOverlay.cpp.i
+.PHONY : src/RendererDebugOverlay.cpp.i
+
+src/RendererDebugOverlay.s: src/RendererDebugOverlay.cpp.s
+.PHONY : src/RendererDebugOverlay.s
+
+# target to generate assembly for a file
+src/RendererDebugOverlay.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererDebugOverlay.cpp.s
+.PHONY : src/RendererDebugOverlay.cpp.s
+
 src/RendererGeometry.o: src/RendererGeometry.cpp.o
 .PHONY : src/RendererGeometry.o
 
@@ -454,6 +478,30 @@ src/RendererShadow.s: src/RendererShadow.cpp.s
 src/RendererShadow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.s
 .PHONY : src/RendererShadow.cpp.s
+
+src/RendererShadowVolume.o: src/RendererShadowVolume.cpp.o
+.PHONY : src/RendererShadowVolume.o
+
+# target to build an object file
+src/RendererShadowVolume.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererShadowVolume.cpp.o
+.PHONY : src/RendererShadowVolume.cpp.o
+
+src/RendererShadowVolume.i: src/RendererShadowVolume.cpp.i
+.PHONY : src/RendererShadowVolume.i
+
+# target to preprocess a source file
+src/RendererShadowVolume.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererShadowVolume.cpp.i
+.PHONY : src/RendererShadowVolume.cpp.i
+
+src/RendererShadowVolume.s: src/RendererShadowVolume.cpp.s
+.PHONY : src/RendererShadowVolume.s
+
+# target to generate assembly for a file
+src/RendererShadowVolume.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererShadowVolume.cpp.s
+.PHONY : src/RendererShadowVolume.cpp.s
 
 src/RendererSwapchain.o: src/RendererSwapchain.cpp.o
 .PHONY : src/RendererSwapchain.o
@@ -581,6 +629,9 @@ help:
 	@echo "... src/RendererCamera.o"
 	@echo "... src/RendererCamera.i"
 	@echo "... src/RendererCamera.s"
+	@echo "... src/RendererDebugOverlay.o"
+	@echo "... src/RendererDebugOverlay.i"
+	@echo "... src/RendererDebugOverlay.s"
 	@echo "... src/RendererGeometry.o"
 	@echo "... src/RendererGeometry.i"
 	@echo "... src/RendererGeometry.s"
@@ -596,6 +647,9 @@ help:
 	@echo "... src/RendererShadow.o"
 	@echo "... src/RendererShadow.i"
 	@echo "... src/RendererShadow.s"
+	@echo "... src/RendererShadowVolume.o"
+	@echo "... src/RendererShadowVolume.i"
+	@echo "... src/RendererShadowVolume.s"
 	@echo "... src/RendererSwapchain.o"
 	@echo "... src/RendererSwapchain.i"
 	@echo "... src/RendererSwapchain.s"

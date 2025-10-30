@@ -98,7 +98,7 @@ vec3 renderSunDisk(vec2 uv) {
             
             // Convert NDC [-1,1] to screen space [0,1]
             vec2 sunScreenPos = sunNDC * 0.5 + 0.5;
-            sunScreenPos.y = 1.0 - sunScreenPos.y; // Flip Y for screen coordinates
+            // sunScreenPos.y = 1.0 - sunScreenPos.y; // Invert vertical movement
             
             // Distance from sun in screen space
             float sunDist = distance(uv, sunScreenPos);
@@ -144,15 +144,95 @@ vec3 renderSunDisk(vec2 uv) {
     return vec3(0.0);
 }
 
+// Volumetric light shafts (god rays)
+vec3 renderLightShafts(vec2 uv) {
+    if (ppUBO.lightShaftIntensity <= 0.0) return vec3(0.0);
+    
+    // Project sun position to screen space
+    vec4 sunViewPos = ppUBO.view * vec4(-ppUBO.sunWorldDir * 1000.0, 1.0);
+    vec4 sunClipPos = ppUBO.proj * sunViewPos;
+    
+    if (sunClipPos.w > 0.0) {
+        vec3 sunNDC = sunClipPos.xyz / sunClipPos.w;
+        vec2 sunScreenPos = sunNDC.xy * 0.5 + 0.5;
+        
+        // Only compute light shafts if sun is somewhat visible on screen
+        if (sunScreenPos.x >= -0.3 && sunScreenPos.x <= 1.3 && 
+            sunScreenPos.y >= -0.3 && sunScreenPos.y <= 1.3) {
+            
+            // March from current pixel toward sun
+            vec2 rayDir = sunScreenPos - uv;
+            float rayLength = length(rayDir);
+            rayDir = normalize(rayDir);
+            
+            // Number of samples along the ray
+            int numSamples = int(ppUBO.lightShaftDensity * 32.0);
+            numSamples = clamp(numSamples, 8, 64);
+            
+            float stepSize = rayLength / float(numSamples);
+            vec2 stepVec = rayDir * stepSize;
+            
+            // Accumulate light along the ray
+            float accumulation = 0.0;
+            vec2 marchPos = uv;
+            
+            for (int i = 0; i < numSamples; i++) {
+                marchPos += stepVec;
+                
+                // Check if we're out of bounds
+                if (marchPos.x < 0.0 || marchPos.x > 1.0 || 
+                    marchPos.y < 0.0 || marchPos.y > 1.0) {
+                    break;
+                }
+                
+                // Sample depth at this position
+                float depth = texture(depthTexture, marchPos).r;
+                
+                // If depth is far (close to 1.0), light can pass through
+                // If depth is near (close to 0.0), geometry blocks the light
+                // This creates the volumetric effect
+                // Relaxed threshold so more light gets through
+                float depthFactor = smoothstep(0.99, 1.0, depth);
+                
+                // Accumulate light (exponential falloff with distance)
+                float distFactor = 1.0 - (float(i) / float(numSamples));
+                accumulation += depthFactor * distFactor;
+            }
+            
+            // Normalize and apply intensity
+            accumulation /= float(numSamples);
+            accumulation *= ppUBO.lightShaftIntensity;
+            
+            // Fade based on distance from sun (wider spread for more visible effect)
+            float sunDist = distance(uv, sunScreenPos);
+            float distanceFade = 1.0 - smoothstep(0.0, 1.0, sunDist);
+            accumulation *= distanceFade;
+            
+            // Add constant atmospheric glow for more visible effect
+            accumulation += 0.1 * ppUBO.lightShaftIntensity * (1.0 - sunDist);
+            
+            // Warm volumetric light color (polluted atmosphere, more saturated)
+            vec3 shaftColor = vec3(1.0, 0.8, 0.5) * accumulation;
+            
+            return shaftColor;
+        }
+    }
+    
+    return vec3(0.0);
+}
+
 void main() {
     // Sample HDR texture
     vec4 hdrColor = texture(hdrTexture, vUV);
     
+    // Render volumetric light shafts
+    vec3 lightShafts = renderLightShafts(vUV);
+    
     // Render visible sun disk (uses sun direction from UBO)
     vec3 sunDiskColor = renderSunDisk(vUV);
     
-    // Combine HDR with sun disk
-    vec3 finalColor = hdrColor.rgb + sunDiskColor;
+    // Combine HDR with light shafts and sun disk
+    vec3 finalColor = hdrColor.rgb + lightShafts + sunDiskColor;
     
     // Apply exposure (clamp to reasonable range to avoid issues)
     float exposure = clamp(ppUBO.exposure, 0.1, 10.0);

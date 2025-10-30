@@ -154,6 +154,82 @@ bool Renderer::createPipeline() {
     return ok;
 }
 
+bool Renderer::createPipelineWireframe() {
+    std::string base = std::string(PC_ENGINE_SHADER_DIR);
+    auto vertCode = readFile(base + "/city.vert.spv");
+    auto fragCode = readFile(base + "/city.frag.spv");
+    if (vertCode.empty() || fragCode.empty()) return false;
+
+    auto createShader = [&](const std::vector<char>& code) {
+        VkShaderModuleCreateInfo ci{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+        ci.codeSize = code.size();
+        ci.pCode = reinterpret_cast<const uint32_t*>(code.data());
+        VkShaderModule m{}; vkCreateShaderModule(device_, &ci, nullptr, &m); return m;
+    };
+    VkShaderModule vert = createShader(vertCode);
+    VkShaderModule frag = createShader(fragCode);
+
+    VkPipelineShaderStageCreateInfo vs{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    vs.stage = VK_SHADER_STAGE_VERTEX_BIT; vs.module = vert; vs.pName = "main";
+    VkPipelineShaderStageCreateInfo fs{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    fs.stage = VK_SHADER_STAGE_FRAGMENT_BIT; fs.module = frag; fs.pName = "main";
+    VkPipelineShaderStageCreateInfo stages[2] = { vs, fs };
+
+    // Vertex format: position (vec3), color (vec3), uv (vec2), texIndex (float), normal (vec3) = 12 floats
+    VkVertexInputBindingDescription binding{}; binding.binding = 0; binding.stride = sizeof(float)*12; binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    VkVertexInputAttributeDescription attrs[5]{};
+    attrs[0].location = 0; attrs[0].binding = 0; attrs[0].format = VK_FORMAT_R32G32B32_SFLOAT; attrs[0].offset = 0;
+    attrs[1].location = 1; attrs[1].binding = 0; attrs[1].format = VK_FORMAT_R32G32B32_SFLOAT; attrs[1].offset = sizeof(float)*3;
+    attrs[2].location = 2; attrs[2].binding = 0; attrs[2].format = VK_FORMAT_R32G32_SFLOAT; attrs[2].offset = sizeof(float)*6;
+    attrs[3].location = 3; attrs[3].binding = 0; attrs[3].format = VK_FORMAT_R32_SFLOAT; attrs[3].offset = sizeof(float)*8;
+    attrs[4].location = 4; attrs[4].binding = 0; attrs[4].format = VK_FORMAT_R32G32B32_SFLOAT; attrs[4].offset = sizeof(float)*9;
+    VkPipelineVertexInputStateCreateInfo vi{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    vi.vertexBindingDescriptionCount = 1; vi.pVertexBindingDescriptions = &binding;
+    vi.vertexAttributeDescriptionCount = 5; vi.pVertexAttributeDescriptions = attrs;
+
+    VkPipelineInputAssemblyStateCreateInfo ia{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    VkViewport viewport{ 0, 0, (float)swapchainExtent_.width, (float)swapchainExtent_.height, 0, 1 };
+    VkRect2D scissor{ {0,0}, swapchainExtent_ };
+    VkPipelineViewportStateCreateInfo vp{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    vp.viewportCount = 1; vp.pViewports = &viewport; vp.scissorCount = 1; vp.pScissors = &scissor;
+
+    // KEY DIFFERENCE: Wireframe mode with no culling
+    VkPipelineRasterizationStateCreateInfo rs{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    rs.polygonMode = VK_POLYGON_MODE_LINE;  // WIREFRAME
+    rs.cullMode = VK_CULL_MODE_NONE;  // Show both sides
+    rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rs.lineWidth = 1.5f;  // Slightly thicker lines for visibility
+
+    VkPipelineMultisampleStateCreateInfo ms{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineDepthStencilStateCreateInfo ds{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    ds.depthTestEnable = VK_TRUE; ds.depthWriteEnable = VK_TRUE; ds.depthCompareOp = VK_COMPARE_OP_LESS;
+
+    VkPipelineColorBlendAttachmentState cbAtt{}; cbAtt.colorWriteMask = 0xF; cbAtt.blendEnable = VK_FALSE;
+    VkPipelineColorBlendStateCreateInfo cb{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    cb.attachmentCount = 1; cb.pAttachments = &cbAtt;
+
+    VkGraphicsPipelineCreateInfo pci{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    pci.stageCount = 2; pci.pStages = stages;
+    pci.pVertexInputState = &vi;
+    pci.pInputAssemblyState = &ia;
+    pci.pViewportState = &vp;
+    pci.pRasterizationState = &rs;
+    pci.pMultisampleState = &ms;
+    pci.pDepthStencilState = &ds;
+    pci.pColorBlendState = &cb;
+    pci.layout = pipelineLayout_;  // Reuse same layout
+    pci.renderPass = hdrRenderPass_; // Use HDR render pass for scene rendering
+    pci.subpass = 0;
+    bool ok = (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pci, nullptr, &graphicsPipelineWireframe_) == VK_SUCCESS);
+    vkDestroyShaderModule(device_, vert, nullptr);
+    vkDestroyShaderModule(device_, frag, nullptr);
+    return ok;
+}
+
 bool Renderer::createNeonPipeline() {
     std::string base = std::string(PC_ENGINE_SHADER_DIR);
     auto vertCode = readFile(base + "/neon.vert.spv");
