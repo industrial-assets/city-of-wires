@@ -1025,6 +1025,8 @@ CMakeFiles/procedural_city.dir/src/Renderer.cpp.o: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__filesystem/path_iterator.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__filesystem/recursive_directory_iterator.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__filesystem/u8path.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/set \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__tree \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/glm.hpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/detail/_fixes.hpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/detail/setup.hpp \
@@ -1213,6 +1215,7 @@ CMakeFiles/procedural_city.dir/src/Renderer.cpp.o: \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/integer.hpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/detail/func_integer.inl \
   /Users/johnbower/Documents/_work/Personal/procedural_city/src/CityGenerator.hpp \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/map \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/random \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__random/bernoulli_distribution.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__random/uniform_real_distribution.h \

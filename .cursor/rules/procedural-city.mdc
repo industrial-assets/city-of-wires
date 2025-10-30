@@ -166,3 +166,39 @@ Or use `./run.sh` for convenience (supports `clean`, `rebuild` flags).
 - RAII for resource management
 - Forward declarations used where possible
 - Header guards: `#pragma once`
+
+## Debug Overlay (In-Engine GUI)
+
+### Overview
+A developer-debug overlay can be toggled in-game with the Tab key. It provides essential real-time metrics for engine development, profiling and optimization.
+
+### Data Displayed
+- **Framerate**: Current FPS (frames per second), live updating.
+- **Polygon Count**: Number of visible polygons/indices in the city geometry.
+- **Chunks**:
+  - Number of currently loaded/generating chunks
+  - List of active chunk coordinates (showing up to N, ideally sorted by proximity)
+- **Buildings/Neon Lights**:
+  - Number of active buildings
+  - Number of active neon lights
+- **Camera**:
+  - Camera world position (X, Y, Z)
+  - Active chunk X/Z coordinates
+- **Memory Usage** (optional/if easily available):
+  - GPU/CPU memory used for geometry/textures
+
+### Appearance
+- Rendered in a semi-transparent, dark-background overlay (default: top-left of window)
+- Use retro futuristic font and styling
+- Uses compact, monospaced text; FPS readout color-coded (green/yellow/red by >60/30/<30)
+- Layout: Text-only, non-interactive, no mouse input required
+- Overlay does not interfere with gameplay or key/mouse controls
+
+### Interaction
+- Pressing `Tab` toggles the overlay. It remains non-intrusive (never blocks controls/game focus).
+
+### Implementation/Dev Requirements
+- Overlay rendering must be highly efficient (must not cause additional frame drops)
+- No additional heavy dependencies unless something like ImGui is already integrated (otherwise, use batched quad+shader text rendering)
+- Data must be computed by the engine/renderer efficiently and update at least once per frame
+- The system should be robust and extensible (so more debug info can be added as the engine matures)

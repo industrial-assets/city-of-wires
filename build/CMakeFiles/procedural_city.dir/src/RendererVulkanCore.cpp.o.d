@@ -1025,6 +1025,8 @@ CMakeFiles/procedural_city.dir/src/RendererVulkanCore.cpp.o: \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__filesystem/path_iterator.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__filesystem/recursive_directory_iterator.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__filesystem/u8path.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/set \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/c++/v1/__tree \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/glm.hpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/detail/_fixes.hpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/detail/setup.hpp \

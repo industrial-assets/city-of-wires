@@ -146,7 +146,7 @@ bool Renderer::createPipeline() {
     pci.pDepthStencilState = &ds;
     pci.pColorBlendState = &cb;
     pci.layout = pipelineLayout_;
-    pci.renderPass = renderPass_;
+    pci.renderPass = hdrRenderPass_; // Use HDR render pass for scene rendering
     pci.subpass = 0;
     bool ok = (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pci, nullptr, &graphicsPipeline_) == VK_SUCCESS);
     vkDestroyShaderModule(device_, vert, nullptr);
@@ -237,7 +237,7 @@ bool Renderer::createNeonPipeline() {
     pci.pDepthStencilState = &ds;
     pci.pColorBlendState = &cb;
     pci.layout = neonLayout;
-    pci.renderPass = renderPass_;
+    pci.renderPass = hdrRenderPass_; // Use HDR render pass for scene rendering
     pci.subpass = 0;
     bool ok = (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &pci, nullptr, &neonPipeline_) == VK_SUCCESS);
     vkDestroyPipelineLayout(device_, neonLayout, nullptr);

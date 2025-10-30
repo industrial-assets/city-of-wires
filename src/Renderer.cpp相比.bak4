@@ -63,18 +63,8 @@ bool Renderer::initialize(GLFWwindow* window) {
     
     // Initialize city generation
     cityGenerator_ = new CityGenerator();
-    CityGenerator* gen = static_cast<CityGenerator*>(cityGenerator_);
-    gen->setGridSpacing(8.0f);
-    gen->setChunkSize(50.0f);
-    
-    // Generate initial chunks around starting camera position
-    // Camera starts at (0, 100, -150), so generate chunks around origin
-    for (int x = -2; x <= 2; ++x) {
-        for (int z = -2; z <= 2; ++z) {
-            gen->generateChunk(x, z, 42);
-            activeChunks_.insert(std::make_pair(x, z));
-        }
-    }
+    static_cast<CityGenerator*>(cityGenerator_)->setGridSpacing(8.0f);
+    static_cast<CityGenerator*>(cityGenerator_)->generateCity(42);
     
     if (!loadTextures()) return false;
     if (!loadNeonTextures()) return false;
@@ -211,12 +201,6 @@ void Renderer::update(float deltaSeconds) {
     // Process movement based on current input
     processMovement(deltaSeconds);
     
-    // Update chunks based on camera position
-    updateChunks();
-    
-    // Rebuild geometry if chunks changed
-    rebuildGeometryIfNeeded();
-    
     checkShaderReload();
 }
 
@@ -305,12 +289,6 @@ void Renderer::drawFrame() {
         std::memcpy(ppUBO.view, &view[0][0], sizeof(float) * 16);
         std::memcpy(ppUBO.proj, &proj[0][0], sizeof(float) * 16);
         
-        // Copy sun world-space direction (normalized, points towards sun)
-        ppUBO.sunWorldDir[0] = skyLightDir_.x;
-        ppUBO.sunWorldDir[1] = skyLightDir_.y;
-        ppUBO.sunWorldDir[2] = skyLightDir_.z;
-        ppUBO._pad = 0.0f;  // Padding
-        
         std::memcpy(postProcessingUBO_.mapped, &ppUBO, sizeof(ppUBO));
     }
 
@@ -361,7 +339,7 @@ bool Renderer::createDepthResources() {
     ci.mipLevels = 1; ci.arrayLayers = 1;
     ci.samples = VK_SAMPLE_COUNT_1_BIT;
     ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     if (vkCreateImage(device_, &ci, nullptr, &depthImage_) != VK_SUCCESS) return false;
     VkMemoryRequirements req; vkGetImageMemoryRequirements(device_, depthImage_, &req);
     VkMemoryAllocateInfo ai{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
@@ -464,7 +442,133 @@ bool Renderer::createVertexIndexBuffers() {
 
 // Moved to RendererResources.cpp
 
-// Moved to RendererShadow.cpp
+bool Renderer::createShadowMapResources() {
+    // Create shadow map image
+    VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = shadowMapSize_;
+    imageInfo.extent.height = shadowMapSize_;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = VK_FORMAT_D32_SFLOAT;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    
+    if (vkCreateImage(device_, &imageInfo, nullptr, &shadowMapImage_) != VK_SUCCESS) return false;
+    
+    VkMemoryRequirements memReq;
+    vkGetImageMemoryRequirements(device_, shadowMapImage_, &memReq);
+    VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = memReq.size;
+    allocInfo.memoryTypeIndex = findMemoryType(memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (vkAllocateMemory(device_, &allocInfo, nullptr, &shadowMapMemory_) != VK_SUCCESS) return false;
+    vkBindImageMemory(device_, shadowMapImage_, shadowMapMemory_, 0);
+    
+    // Create shadow map image view
+    VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    viewInfo.image = shadowMapImage_;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = VK_FORMAT_D32_SFLOAT;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.layerCount = 1;
+    if (vkCreateImageView(device_, &viewInfo, nullptr, &shadowMapView_) != VK_SUCCESS) return false;
+    
+    // Create shadow map sampler
+    VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    samplerInfo.compareEnable = VK_TRUE;
+    samplerInfo.compareOp = VK_COMPARE_OP_LESS;
+    if (vkCreateSampler(device_, &samplerInfo, nullptr, &shadowMapSampler_) != VK_SUCCESS) return false;
+    
+    // Create shadow map render pass
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    
+    VkAttachmentReference depthRef{0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+    
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.pDepthStencilAttachment = &depthRef;
+    
+    VkRenderPassCreateInfo rpInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+    rpInfo.attachmentCount = 1;
+    rpInfo.pAttachments = &depthAttachment;
+    rpInfo.subpassCount = 1;
+    rpInfo.pSubpasses = &subpass;
+    if (vkCreateRenderPass(device_, &rpInfo, nullptr, &shadowMapRenderPass_) != VK_SUCCESS) return false;
+    
+    // Create shadow map framebuffer
+    VkFramebufferCreateInfo fbInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+    fbInfo.renderPass = shadowMapRenderPass_;
+        fbInfo.attachmentCount = 1;
+    fbInfo.pAttachments = &shadowMapView_;
+    fbInfo.width = shadowMapSize_;
+    fbInfo.height = shadowMapSize_;
+        fbInfo.layers = 1;
+    if (vkCreateFramebuffer(device_, &fbInfo, nullptr, &shadowMapFramebuffer_) != VK_SUCCESS) return false;
+    
+    return true;
+}
+
+void Renderer::renderShadowMap(VkCommandBuffer cmd) {
+    // Transition shadow map to depth attachment layout
+    VkImageMemoryBarrier barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = shadowMapImage_;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    
+    VkRenderPassBeginInfo rpInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+    rpInfo.renderPass = shadowMapRenderPass_;
+    rpInfo.framebuffer = shadowMapFramebuffer_;
+    rpInfo.renderArea.extent = {shadowMapSize_, shadowMapSize_};
+    VkClearValue clearValue{};
+    clearValue.depthStencil = {1.0f, 0};
+    rpInfo.clearValueCount = 1;
+    rpInfo.pClearValues = &clearValue;
+    
+    vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+    
+    // Render city geometry from light's perspective
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline_);
+    VkDeviceSize offs = 0;
+    vkCmdBindVertexBuffers(cmd, 0, 1, &cityVertexBuffer_, &offs);
+    vkCmdBindIndexBuffer(cmd, cityIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, 1, &descriptorSets_[0], 0, nullptr);
+    vkCmdDrawIndexed(cmd, cityIndexCount_, 1, 0, 0, 0);
+    
+    vkCmdEndRenderPass(cmd);
+    
+    // Transition shadow map back to read-only layout
+    barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
 
 void Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex) {
     VkCommandBufferBeginInfo bi{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -673,11 +777,11 @@ bool Renderer::createHDRRenderTarget() {
     depthAttachment.format = VK_FORMAT_D32_SFLOAT;
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     
     std::array<VkAttachmentDescription, 2> atts{ colorAttachment, depthAttachment };
     
@@ -687,28 +791,16 @@ bool Renderer::createHDRRenderTarget() {
     dependency.dstSubpass = 0;
     dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    
-    // Add second dependency for depth buffer access in post-processing
-    VkSubpassDependency depthDependency{};
-    depthDependency.srcSubpass = 0;
-    depthDependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-    depthDependency.srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    depthDependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    depthDependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    depthDependency.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    depthDependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-    
-    std::array<VkSubpassDependency, 2> dependencies{ dependency, depthDependency };
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     
     VkRenderPassCreateInfo rpInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
     rpInfo.attachmentCount = 2;
     rpInfo.pAttachments = atts.data();
     rpInfo.subpassCount = 1;
     rpInfo.pSubpasses = &subpass;
-    rpInfo.dependencyCount = 2;
-    rpInfo.pDependencies = dependencies.data();
+    rpInfo.dependencyCount = 1;
+    rpInfo.pDependencies = &dependency;
     if (vkCreateRenderPass(device_, &rpInfo, nullptr, &hdrRenderPass_) != VK_SUCCESS) return false;
     
     // Create framebuffer (reuse depth buffer from main render)
@@ -903,15 +995,9 @@ bool Renderer::createPostProcessingPipeline() {
     bloomTexBinding.descriptorCount = 1;
     bloomTexBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     
-    VkDescriptorSetLayoutBinding depthTexBinding{};
-    depthTexBinding.binding = 3;
-    depthTexBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    depthTexBinding.descriptorCount = 1;
-    depthTexBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    
-    VkDescriptorSetLayoutBinding bindings[4] = { uboBinding, hdrTexBinding, bloomTexBinding, depthTexBinding };
+    VkDescriptorSetLayoutBinding bindings[3] = { uboBinding, hdrTexBinding, bloomTexBinding };
     VkDescriptorSetLayoutCreateInfo dslci{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-    dslci.bindingCount = 4;
+    dslci.bindingCount = 3;
     dslci.pBindings = bindings;
     if (vkCreateDescriptorSetLayout(device_, &dslci, nullptr, &postProcessingDescriptorLayout_) != VK_SUCCESS) {
         vkDestroyShaderModule(device_, vert, nullptr);
@@ -995,15 +1081,15 @@ bool Renderer::createPostProcessingDescriptorSet() {
     vkUnmapMemory(device_, fullscreenQuadBufferMemory_);
     
     // Create descriptor pool
-    VkDescriptorPoolSize poolSizes[2]{};
+    VkDescriptorPoolSize poolSizes[3]{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = 1;
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = 3; // HDR + bloom + depth
+    poolSizes[1].descriptorCount = 2; // HDR + bloom
     
     VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
     poolInfo.maxSets = 1;
-    poolInfo.poolSizeCount = 2;
+    poolInfo.poolSizeCount = 3;
     poolInfo.pPoolSizes = poolSizes;
     if (vkCreateDescriptorPool(device_, &poolInfo, nullptr, &postProcessingDescriptorPool_) != VK_SUCCESS) return false;
     
@@ -1045,12 +1131,7 @@ bool Renderer::createPostProcessingDescriptorSet() {
     bloomImageInfo.imageView = bloomViews_[0];
     bloomImageInfo.sampler = textureSampler_;
     
-    VkDescriptorImageInfo depthImageInfo{};
-    depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    depthImageInfo.imageView = depthImageView_;
-    depthImageInfo.sampler = textureSampler_;
-    
-    VkWriteDescriptorSet writes[4]{};
+    VkWriteDescriptorSet writes[3]{};
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].dstSet = postProcessingDescriptorSet_;
     writes[0].dstBinding = 0;
@@ -1072,14 +1153,7 @@ bool Renderer::createPostProcessingDescriptorSet() {
     writes[2].descriptorCount = 1;
     writes[2].pImageInfo = &bloomImageInfo;
     
-    writes[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[3].dstSet = postProcessingDescriptorSet_;
-    writes[3].dstBinding = 3;
-    writes[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writes[3].descriptorCount = 1;
-    writes[3].pImageInfo = &depthImageInfo;
-    
-    vkUpdateDescriptorSets(device_, 4, writes, 0, nullptr);
+    vkUpdateDescriptorSets(device_, 3, writes, 0, nullptr);
     
     return true;
 }
@@ -1096,134 +1170,6 @@ void Renderer::renderPostProcessing(VkCommandBuffer cmd, uint32_t imageIndex) {
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &fullscreenQuadBuffer_, &offset);
     vkCmdDraw(cmd, 4, 1, 0, 0); // Draw quad (2 triangles)
-}
-
-void Renderer::updateChunks() {
-    CityGenerator* gen = static_cast<CityGenerator*>(cityGenerator_);
-    if (!gen) return;
-    
-    float chunkSize = gen->getChunkSize();
-    
-    // Calculate which chunk the camera is in
-    // Account for city center offset (cityWidth_/2, cityDepth_/2)
-    float camX = cameraPos_.x;
-    float camZ = cameraPos_.z;
-    
-    // Convert world position to chunk coordinates
-    // Using floor division to get chunk indices
-    int currentChunkX = static_cast<int>(std::floor(camX / chunkSize));
-    int currentChunkZ = static_cast<int>(std::floor(camZ / chunkSize));
-    
-    // Determine chunks to load and unload
-    std::set<std::pair<int, int>> chunksToLoad;
-    std::set<std::pair<int, int>> chunksToUnload;
-    
-    // Calculate radius of chunks to keep loaded (in chunk units)
-    int loadRadius = static_cast<int>(std::ceil(chunkLoadDistance_ / chunkSize));
-    int unloadRadius = static_cast<int>(std::ceil(chunkUnloadDistance_ / chunkSize));
-    
-    // Find chunks within load distance
-    for (int x = currentChunkX - loadRadius; x <= currentChunkX + loadRadius; ++x) {
-        for (int z = currentChunkZ - loadRadius; z <= currentChunkZ + loadRadius; ++z) {
-            auto chunkKey = std::make_pair(x, z);
-            
-            // Check if chunk is within load distance
-            float chunkCenterX = (x + 0.5f) * chunkSize;
-            float chunkCenterZ = (z + 0.5f) * chunkSize;
-            float dx = camX - chunkCenterX;
-            float dz = camZ - chunkCenterZ;
-            float distSq = dx * dx + dz * dz;
-            
-            if (distSq <= chunkLoadDistance_ * chunkLoadDistance_) {
-                if (activeChunks_.find(chunkKey) == activeChunks_.end()) {
-                    chunksToLoad.insert(chunkKey);
-                }
-            }
-        }
-    }
-    
-    // Find chunks to unload (outside unload distance)
-    for (auto it = activeChunks_.begin(); it != activeChunks_.end();) {
-        int x = it->first;
-        int z = it->second;
-        float chunkCenterX = (x + 0.5f) * chunkSize;
-        float chunkCenterZ = (z + 0.5f) * chunkSize;
-        float dx = camX - chunkCenterX;
-        float dz = camZ - chunkCenterZ;
-        float distSq = dx * dx + dz * dz;
-        
-        if (distSq > chunkUnloadDistance_ * chunkUnloadDistance_) {
-            chunksToUnload.insert(*it);
-            it = activeChunks_.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    
-    // Load new chunks
-    for (const auto& chunkKey : chunksToLoad) {
-        gen->generateChunk(chunkKey.first, chunkKey.second, 42);
-        activeChunks_.insert(chunkKey);
-        geometryNeedsRebuild_ = true;
-    }
-    
-    // Unload distant chunks
-    for (const auto& chunkKey : chunksToUnload) {
-        gen->removeChunk(chunkKey.first, chunkKey.second);
-        geometryNeedsRebuild_ = true;
-    }
-}
-
-void Renderer::rebuildGeometryIfNeeded() {
-    if (!geometryNeedsRebuild_) return;
-    
-    geometryNeedsRebuild_ = false;
-    
-    // Wait for GPU to finish before rebuilding
-    vkDeviceWaitIdle(device_);
-    
-    // Clean up old geometry buffers
-    if (cityVertexBuffer_) {
-        vkDestroyBuffer(device_, cityVertexBuffer_, nullptr);
-        cityVertexBuffer_ = VK_NULL_HANDLE;
-    }
-    if (cityVertexBufferMemory_) {
-        vkFreeMemory(device_, cityVertexBufferMemory_, nullptr);
-        cityVertexBufferMemory_ = VK_NULL_HANDLE;
-    }
-    if (cityIndexBuffer_) {
-        vkDestroyBuffer(device_, cityIndexBuffer_, nullptr);
-        cityIndexBuffer_ = VK_NULL_HANDLE;
-    }
-    if (cityIndexBufferMemory_) {
-        vkFreeMemory(device_, cityIndexBufferMemory_, nullptr);
-        cityIndexBufferMemory_ = VK_NULL_HANDLE;
-    }
-    
-    if (neonVertexBuffer_) {
-        vkDestroyBuffer(device_, neonVertexBuffer_, nullptr);
-        neonVertexBuffer_ = VK_NULL_HANDLE;
-    }
-    if (neonVertexBufferMemory_) {
-        vkFreeMemory(device_, neonVertexBufferMemory_, nullptr);
-        neonVertexBufferMemory_ = VK_NULL_HANDLE;
-    }
-    if (neonIndexBuffer_) {
-        vkDestroyBuffer(device_, neonIndexBuffer_, nullptr);
-        neonIndexBuffer_ = VK_NULL_HANDLE;
-    }
-    if (neonIndexBufferMemory_) {
-        vkFreeMemory(device_, neonIndexBufferMemory_, nullptr);
-        neonIndexBufferMemory_ = VK_NULL_HANDLE;
-    }
-    
-    // Rebuild geometry
-    if (!createCityGeometry()) {
-        printf("Failed to rebuild city geometry\n");
-    }
-    if (!createNeonGeometry()) {
-        printf("Failed to rebuild neon geometry\n");
-    }
 }
 
 }

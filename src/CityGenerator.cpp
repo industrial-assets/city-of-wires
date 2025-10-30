@@ -16,6 +16,7 @@ void CityGenerator::generateCity(int seed) {
     rng_.seed(seed);
     buildings_.clear();
     neonLights_.clear();
+    chunkData_.clear();
     
     // Generate buildings on a grid with some randomness
     for (int x = 0; x < gridSize_; ++x) {
@@ -29,6 +30,98 @@ void CityGenerator::generateCity(int seed) {
     }
     
     printf("Generated %zu buildings with %zu neon lights\n", buildings_.size(), neonLights_.size());
+}
+
+void CityGenerator::generateChunk(int chunkX, int chunkZ, int baseSeed) {
+    // Check if chunk already exists
+    auto chunkKey = std::make_pair(chunkX, chunkZ);
+    if (chunkData_.find(chunkKey) != chunkData_.end()) {
+        return; // Chunk already generated
+    }
+    
+    // Create a deterministic seed for this chunk based on its coordinates
+    // Using a hash function to combine chunk coordinates and base seed
+    int chunkSeed = baseSeed;
+    chunkSeed = chunkSeed * 73856093 ^ chunkX * 19349663;
+    chunkSeed = chunkSeed ^ chunkZ * 83492791;
+    
+    rng_.seed(chunkSeed);
+    
+    // Store starting indices
+    size_t buildingStartIndex = buildings_.size();
+    size_t neonStartIndex = neonLights_.size();
+    
+    // Generate buildings for this chunk
+    float chunkWorldX = chunkX * chunkSize_;
+    float chunkWorldZ = chunkZ * chunkSize_;
+    
+    // Generate buildings within this chunk
+    for (int x = 0; x < buildingsPerChunk_; ++x) {
+        for (int z = 0; z < buildingsPerChunk_; ++z) {
+            // Skip some grid positions for density variation
+            if (neonDist_(rng_) > buildingDensity_) continue;
+            
+            // Position relative to chunk center
+            float localX = (x * gridSpacing_) - (chunkSize_ * 0.5f);
+            float localZ = (z * gridSpacing_) - (chunkSize_ * 0.5f);
+            
+            // Calculate world position (add city center offset to match old generateCity behavior)
+            float worldX = chunkWorldX + localX + cityWidth_ * 0.5f;
+            float worldZ = chunkWorldZ + localZ + cityDepth_ * 0.5f;
+            
+            glm::vec2 gridPos(worldX, worldZ);
+            generateBuilding(gridPos);
+        }
+    }
+    
+    // Store indices for this chunk
+    ChunkData chunkData;
+    for (size_t i = buildingStartIndex; i < buildings_.size(); ++i) {
+        chunkData.buildingIndices.push_back(i);
+    }
+    for (size_t i = neonStartIndex; i < neonLights_.size(); ++i) {
+        chunkData.neonIndices.push_back(i);
+    }
+    chunkData_[chunkKey] = chunkData;
+    
+    printf("Generated chunk (%d, %d): %zu buildings, %zu neon lights\n", 
+           chunkX, chunkZ, chunkData.buildingIndices.size(), chunkData.neonIndices.size());
+}
+
+void CityGenerator::removeChunk(int chunkX, int chunkZ) {
+    auto chunkKey = std::make_pair(chunkX, chunkZ);
+    auto it = chunkData_.find(chunkKey);
+    if (it == chunkData_.end()) {
+        return; // Chunk doesn't exist
+    }
+    
+    // Remove buildings and neons in reverse order to maintain indices
+    ChunkData& chunkData = it->second;
+    
+    // Remove neon lights first (they come after buildings in vector)
+    for (auto it = chunkData.neonIndices.rbegin(); it != chunkData.neonIndices.rend(); ++it) {
+        size_t index = *it;
+        if (index < neonLights_.size()) {
+            neonLights_.erase(neonLights_.begin() + index);
+        }
+    }
+    
+    // Remove buildings
+    for (auto it = chunkData.buildingIndices.rbegin(); it != chunkData.buildingIndices.rend(); ++it) {
+        size_t index = *it;
+        if (index < buildings_.size()) {
+            buildings_.erase(buildings_.begin() + index);
+        }
+    }
+    
+    // Remove chunk from tracking
+    chunkData_.erase(it);
+    
+    printf("Removed chunk (%d, %d)\n", chunkX, chunkZ);
+    
+    // Note: Removing chunks invalidates indices of later chunks
+    // For simplicity, we'll rebuild all geometry when chunks change
+    // A more efficient approach would update indices incrementally
 }
 
 void CityGenerator::generateBuilding(glm::vec2 gridPos) {

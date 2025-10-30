@@ -7,6 +7,7 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
+#include <set>
 #include <glm/glm.hpp>
 
 struct GLFWwindow;
@@ -44,6 +45,10 @@ struct PostProcessingUBO {
     float colorTemperature;
     float lightShaftIntensity;
     float lightShaftDensity;
+    float view[16];  // View matrix for sun projection
+    float proj[16];  // Projection matrix for sun projection
+    float sunWorldDir[3];  // World-space sun direction (normalized, points towards sun)
+    float _pad;  // Padding for std140 alignment
 };
 
 class Renderer {
@@ -86,6 +91,8 @@ private:
     bool reloadShaders();
     bool createCityGeometry();
     bool createNeonGeometry();
+    void updateChunks();
+    void rebuildGeometryIfNeeded();
     bool loadTextures();
     bool createTextureImage(const std::string& filename, VkImage& image, VkDeviceMemory& memory);
     bool createTextureImageView(VkImage image, VkImageView& imageView);
@@ -198,6 +205,7 @@ private:
     VkImageView buildingTextureViews_[kMaxBuildingTextures] = {};
     VkSampler textureSampler_ = VK_NULL_HANDLE;
     int numBuildingTextures_ = 0;
+    
 
     // Neon texture resources
     VkImage neonArrayImage_ = VK_NULL_HANDLE;
@@ -231,9 +239,14 @@ private:
 
     float rotation_ = 0.0f;
     float time_ = 0.0f;
+    bool hdrImageInitialized_ = false; // Track if HDR image has been transitioned from UNDEFINED
     
     // City generation
     void* cityGenerator_; // Opaque pointer to avoid forward declaration issues
+    std::set<std::pair<int, int>> activeChunks_;  // Track which chunks are currently loaded
+    bool geometryNeedsRebuild_ = false;  // Flag to indicate geometry needs updating
+    float chunkLoadDistance_ = 150.0f;  // Distance to load chunks (in world units)
+    float chunkUnloadDistance_ = 200.0f;  // Distance to unload chunks (in world units)
     
     // Atmospheric parameters
     glm::vec3 cameraPos_ = glm::vec3(0, 100, -150);  // Start behind the city, looking towards it
@@ -243,16 +256,16 @@ private:
     float skyLightIntensity_ = 0.6f;  // Slightly stronger light
     
     // Post-processing parameters
-    float exposure_ = 1.2f;  // Slightly higher exposure
+    float exposure_ = 1.8f;  // Balanced exposure for HDR tone mapping
     float bloomThreshold_ = 0.7f;  // Lower threshold for more bloom
-    float bloomIntensity_ = 0.8f;  // Stronger bloom
+    float bloomIntensity_ = 0.0f;  // Bloom disabled until properly implemented
     float fogHeightFalloff_ = 0.15f;  // More height-based fog variation
     float fogHeightOffset_ = 0.0f;
     float vignetteStrength_ = 0.4f;  // Stronger vignette
     float vignetteRadius_ = 0.7f;  // Smaller radius for more dramatic effect
     float grainStrength_ = 0.15f;  // More film grain
-    float contrast_ = 1.4f;  // Higher contrast
-    float saturation_ = 0.7f;  // More desaturated
+    float contrast_ = 1.2f;  // Moderate contrast
+    float saturation_ = 0.9f;  // Less desaturated for more vibrant colors
     float colorTemperature_ = 0.6f;  // Cooler temperature for dystopian look
     float lightShaftIntensity_ = 0.6f;  // Stronger light shafts
     float lightShaftDensity_ = 0.03f;  // Denser light shafts

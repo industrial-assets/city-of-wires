@@ -71,6 +71,10 @@ set(ENGINE_SOURCES
   src/RendererSwapchain.cpp
   src/RendererPipelines.cpp
   src/RendererCamera.cpp
+  src/RendererResources.cpp
+  src/RendererGeometry.cpp
+  src/RendererShadow.cpp
+  src/RendererPostProcess.cpp
   src/VulkanUtils.cpp
   src/CityGenerator.cpp
 )

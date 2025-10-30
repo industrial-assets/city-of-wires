@@ -335,6 +335,30 @@ src/RendererCamera.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.s
 .PHONY : src/RendererCamera.cpp.s
 
+src/RendererGeometry.o: src/RendererGeometry.cpp.o
+.PHONY : src/RendererGeometry.o
+
+# target to build an object file
+src/RendererGeometry.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o
+.PHONY : src/RendererGeometry.cpp.o
+
+src/RendererGeometry.i: src/RendererGeometry.cpp.i
+.PHONY : src/RendererGeometry.i
+
+# target to preprocess a source file
+src/RendererGeometry.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.i
+.PHONY : src/RendererGeometry.cpp.i
+
+src/RendererGeometry.s: src/RendererGeometry.cpp.s
+.PHONY : src/RendererGeometry.s
+
+# target to generate assembly for a file
+src/RendererGeometry.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.s
+.PHONY : src/RendererGeometry.cpp.s
+
 src/RendererPipelines.o: src/RendererPipelines.cpp.o
 .PHONY : src/RendererPipelines.o
 
@@ -358,6 +382,78 @@ src/RendererPipelines.s: src/RendererPipelines.cpp.s
 src/RendererPipelines.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererPipelines.cpp.s
 .PHONY : src/RendererPipelines.cpp.s
+
+src/RendererPostProcess.o: src/RendererPostProcess.cpp.o
+.PHONY : src/RendererPostProcess.o
+
+# target to build an object file
+src/RendererPostProcess.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o
+.PHONY : src/RendererPostProcess.cpp.o
+
+src/RendererPostProcess.i: src/RendererPostProcess.cpp.i
+.PHONY : src/RendererPostProcess.i
+
+# target to preprocess a source file
+src/RendererPostProcess.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.i
+.PHONY : src/RendererPostProcess.cpp.i
+
+src/RendererPostProcess.s: src/RendererPostProcess.cpp.s
+.PHONY : src/RendererPostProcess.s
+
+# target to generate assembly for a file
+src/RendererPostProcess.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.s
+.PHONY : src/RendererPostProcess.cpp.s
+
+src/RendererResources.o: src/RendererResources.cpp.o
+.PHONY : src/RendererResources.o
+
+# target to build an object file
+src/RendererResources.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o
+.PHONY : src/RendererResources.cpp.o
+
+src/RendererResources.i: src/RendererResources.cpp.i
+.PHONY : src/RendererResources.i
+
+# target to preprocess a source file
+src/RendererResources.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererResources.cpp.i
+.PHONY : src/RendererResources.cpp.i
+
+src/RendererResources.s: src/RendererResources.cpp.s
+.PHONY : src/RendererResources.s
+
+# target to generate assembly for a file
+src/RendererResources.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererResources.cpp.s
+.PHONY : src/RendererResources.cpp.s
+
+src/RendererShadow.o: src/RendererShadow.cpp.o
+.PHONY : src/RendererShadow.o
+
+# target to build an object file
+src/RendererShadow.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o
+.PHONY : src/RendererShadow.cpp.o
+
+src/RendererShadow.i: src/RendererShadow.cpp.i
+.PHONY : src/RendererShadow.i
+
+# target to preprocess a source file
+src/RendererShadow.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.i
+.PHONY : src/RendererShadow.cpp.i
+
+src/RendererShadow.s: src/RendererShadow.cpp.s
+.PHONY : src/RendererShadow.s
+
+# target to generate assembly for a file
+src/RendererShadow.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/procedural_city.dir/build.make CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.s
+.PHONY : src/RendererShadow.cpp.s
 
 src/RendererSwapchain.o: src/RendererSwapchain.cpp.o
 .PHONY : src/RendererSwapchain.o
@@ -485,9 +581,21 @@ help:
 	@echo "... src/RendererCamera.o"
 	@echo "... src/RendererCamera.i"
 	@echo "... src/RendererCamera.s"
+	@echo "... src/RendererGeometry.o"
+	@echo "... src/RendererGeometry.i"
+	@echo "... src/RendererGeometry.s"
 	@echo "... src/RendererPipelines.o"
 	@echo "... src/RendererPipelines.i"
 	@echo "... src/RendererPipelines.s"
+	@echo "... src/RendererPostProcess.o"
+	@echo "... src/RendererPostProcess.i"
+	@echo "... src/RendererPostProcess.s"
+	@echo "... src/RendererResources.o"
+	@echo "... src/RendererResources.i"
+	@echo "... src/RendererResources.s"
+	@echo "... src/RendererShadow.o"
+	@echo "... src/RendererShadow.i"
+	@echo "... src/RendererShadow.s"
 	@echo "... src/RendererSwapchain.o"
 	@echo "... src/RendererSwapchain.i"
 	@echo "... src/RendererSwapchain.s"

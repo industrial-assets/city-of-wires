@@ -1,5 +1,5 @@
-CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.o: \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererCamera.cpp \
+CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o: \
+  /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererShadow.cpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/src/Renderer.hpp \
   /usr/local/include/vulkan/vulkan.h \
   /usr/local/include/vulkan/vk_platform.h \
@@ -1213,33 +1213,4 @@ CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.o: \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/matrix.hpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/vector_relational.hpp \
   /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/integer.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/detail/func_integer.inl \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glfw-src/include/GLFW/glfw3.h \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/OpenGL.framework/Headers/gl.h \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/OpenGL.framework/Headers/gltypes.h \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/OpenGL.framework/Headers/OpenGLAvailability.h \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/usr/include/os/availability.h \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/matrix_transform.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../mat4x4.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../vec2.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../vec3.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../vec4.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/matrix_projection.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../gtc/constants.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../gtc/../ext/scalar_constants.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../gtc/../ext/../detail/setup.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../gtc/../ext/scalar_constants.inl \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../gtc/constants.inl \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../geometric.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../trigonometric.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../matrix.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/matrix_projection.inl \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/matrix_clip_space.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/../ext/scalar_constants.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/matrix_clip_space.inl \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/matrix_transform.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../ext/matrix_transform.inl \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/matrix_transform.inl \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../geometric.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../trigonometric.hpp \
-  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/gtc/../matrix.hpp
+  /Users/johnbower/Documents/_work/Personal/procedural_city/build/_deps/glm-src/glm/detail/func_integer.inl

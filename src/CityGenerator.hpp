@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <map>
 #include <glm/glm.hpp>
 #include <random>
 
@@ -36,6 +37,11 @@ public:
     ~CityGenerator() = default;
 
     void generateCity(int seed = 42);
+    
+    // Chunk-based generation for infinite city
+    void generateChunk(int chunkX, int chunkZ, int baseSeed = 42);
+    void removeChunk(int chunkX, int chunkZ);
+    
     const std::vector<Building>& getBuildings() const { return buildings_; }
     const std::vector<NeonLight>& getNeonLights() const { return neonLights_; }
     
@@ -45,6 +51,10 @@ public:
     void setMaxHeight(float height) { maxHeight_ = height; }
     void setHeightDistributionLambda(float lambda) { heightDistributionLambda_ = lambda; }
     void setGridSpacing(float spacing) { gridSpacing_ = spacing; }
+    
+    // Chunk parameters
+    float getChunkSize() const { return chunkSize_; }
+    void setChunkSize(float size) { chunkSize_ = size; }
 
 private:
     void generateBuilding(glm::vec2 gridPos);
@@ -69,11 +79,22 @@ private:
     int gridSize_ = 50;
     float gridSpacing_ = 4.0f;
     
+    // Chunk parameters
+    float chunkSize_ = 50.0f;  // Size of each chunk in world units
+    int buildingsPerChunk_ = 8;  // Grid cells per chunk dimension
+    
     // Random generation
     std::mt19937 rng_;
     std::uniform_real_distribution<float> heightDist_;
     std::uniform_real_distribution<float> colorDist_;
     std::uniform_real_distribution<float> neonDist_;
+    
+    // Track which buildings/neons belong to which chunk
+    struct ChunkData {
+        std::vector<size_t> buildingIndices;
+        std::vector<size_t> neonIndices;
+    };
+    std::map<std::pair<int, int>, ChunkData> chunkData_;
 };
 
 }

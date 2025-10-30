@@ -167,10 +167,66 @@ CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.s"
 	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererCamera.cpp -o CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.s
 
+CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o: CMakeFiles/procedural_city.dir/flags.make
+CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o: /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererResources.cpp
+CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o: CMakeFiles/procedural_city.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o -MF CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o.d -o CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o -c /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererResources.cpp
+
+CMakeFiles/procedural_city.dir/src/RendererResources.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/procedural_city.dir/src/RendererResources.cpp.i"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererResources.cpp > CMakeFiles/procedural_city.dir/src/RendererResources.cpp.i
+
+CMakeFiles/procedural_city.dir/src/RendererResources.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/procedural_city.dir/src/RendererResources.cpp.s"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererResources.cpp -o CMakeFiles/procedural_city.dir/src/RendererResources.cpp.s
+
+CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o: CMakeFiles/procedural_city.dir/flags.make
+CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o: /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererGeometry.cpp
+CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o: CMakeFiles/procedural_city.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o -MF CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o.d -o CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o -c /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererGeometry.cpp
+
+CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.i"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererGeometry.cpp > CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.i
+
+CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.s"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererGeometry.cpp -o CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.s
+
+CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o: CMakeFiles/procedural_city.dir/flags.make
+CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o: /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererShadow.cpp
+CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o: CMakeFiles/procedural_city.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o -MF CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o.d -o CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o -c /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererShadow.cpp
+
+CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.i"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererShadow.cpp > CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.i
+
+CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.s"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererShadow.cpp -o CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.s
+
+CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o: CMakeFiles/procedural_city.dir/flags.make
+CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o: /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererPostProcess.cpp
+CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o: CMakeFiles/procedural_city.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o -MF CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o.d -o CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o -c /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererPostProcess.cpp
+
+CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.i"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererPostProcess.cpp > CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.i
+
+CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.s"
+	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/johnbower/Documents/_work/Personal/procedural_city/src/RendererPostProcess.cpp -o CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.s
+
 CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o: CMakeFiles/procedural_city.dir/flags.make
 CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o: /Users/johnbower/Documents/_work/Personal/procedural_city/src/VulkanUtils.cpp
 CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o: CMakeFiles/procedural_city.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o"
 	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o -MF CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o.d -o CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o -c /Users/johnbower/Documents/_work/Personal/procedural_city/src/VulkanUtils.cpp
 
 CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.i: cmake_force
@@ -184,7 +240,7 @@ CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.s: cmake_force
 CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o: CMakeFiles/procedural_city.dir/flags.make
 CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o: /Users/johnbower/Documents/_work/Personal/procedural_city/src/CityGenerator.cpp
 CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o: CMakeFiles/procedural_city.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o"
 	/Volumes/External/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o -MF CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o.d -o CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o -c /Users/johnbower/Documents/_work/Personal/procedural_city/src/CityGenerator.cpp
 
 CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.i: cmake_force
@@ -204,6 +260,10 @@ procedural_city_OBJECTS = \
 "CMakeFiles/procedural_city.dir/src/RendererSwapchain.cpp.o" \
 "CMakeFiles/procedural_city.dir/src/RendererPipelines.cpp.o" \
 "CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.o" \
+"CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o" \
+"CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o" \
+"CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o" \
+"CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o" \
 "CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o" \
 "CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o"
 
@@ -217,6 +277,10 @@ procedural_city: CMakeFiles/procedural_city.dir/src/RendererVulkanCore.cpp.o
 procedural_city: CMakeFiles/procedural_city.dir/src/RendererSwapchain.cpp.o
 procedural_city: CMakeFiles/procedural_city.dir/src/RendererPipelines.cpp.o
 procedural_city: CMakeFiles/procedural_city.dir/src/RendererCamera.cpp.o
+procedural_city: CMakeFiles/procedural_city.dir/src/RendererResources.cpp.o
+procedural_city: CMakeFiles/procedural_city.dir/src/RendererGeometry.cpp.o
+procedural_city: CMakeFiles/procedural_city.dir/src/RendererShadow.cpp.o
+procedural_city: CMakeFiles/procedural_city.dir/src/RendererPostProcess.cpp.o
 procedural_city: CMakeFiles/procedural_city.dir/src/VulkanUtils.cpp.o
 procedural_city: CMakeFiles/procedural_city.dir/src/CityGenerator.cpp.o
 procedural_city: CMakeFiles/procedural_city.dir/build.make
@@ -224,7 +288,7 @@ procedural_city: _deps/glfw-build/src/libglfw3.a
 procedural_city: _deps/glm-build/glm/libglm.a
 procedural_city: /usr/local/lib/libvulkan.dylib
 procedural_city: CMakeFiles/procedural_city.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX executable procedural_city"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/johnbower/Documents/_work/Personal/procedural_city/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking CXX executable procedural_city"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/procedural_city.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
