@@ -279,7 +279,7 @@ private:
     glm::vec3 cameraPos_ = glm::vec3(0, 100, -150);  // Start behind the city, looking towards it
     glm::vec3 fogColor_ = glm::vec3(0.08f, 0.12f, 0.15f);  // Slightly more green-tinted fog
     float fogDensity_ = 0.02f;  // Slightly denser fog
-    glm::vec3 skyLightDir_ = glm::vec3(0.3f, -0.7f, 0.6f);  // Light travels: right, DOWN, forward (sun is upper-left)
+    glm::vec3 skyLightDir_ = glm::vec3(0.3f, 0.7f, 0.6f);  // Light travels: right, UP, forward (convention: toward sun for lighting calcs)
     float skyLightIntensity_ = 0.6f;  // Slightly stronger light
     
     // Post-processing parameters
@@ -294,7 +294,7 @@ private:
     float contrast_ = 1.2f;  // Moderate contrast
     float saturation_ = 0.9f;  // Less desaturated for more vibrant colors
     float colorTemperature_ = 0.6f;  // Cooler temperature for dystopian look
-    float lightShaftIntensity_ = 2.5f;  // Much stronger light shafts for visibility
+    float lightShaftIntensity_ = 0.3f;  // Very subtle atmospheric light
     float lightShaftDensity_ = 0.5f;  // More ray samples for quality
 
     // Debug Overlay state and methods

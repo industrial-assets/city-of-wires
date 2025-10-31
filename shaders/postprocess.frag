@@ -211,8 +211,8 @@ vec3 renderLightShafts(vec2 uv) {
             // Add constant atmospheric glow for more visible effect
             accumulation += 0.1 * ppUBO.lightShaftIntensity * (1.0 - sunDist);
             
-            // Warm volumetric light color (polluted atmosphere, more saturated)
-            vec3 shaftColor = vec3(1.0, 0.8, 0.5) * accumulation;
+            // Teal volumetric light color (cool atmospheric scattering)
+            vec3 shaftColor = vec3(0.4, 0.9, 0.95) * accumulation;
             
             return shaftColor;
         }

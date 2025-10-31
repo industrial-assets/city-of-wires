@@ -117,8 +117,8 @@ void main() {
     vec3 baseColor = mix(vColor, textureColor, 0.7);
     
     // Calculate directional lighting
-    // skyLightDir points FROM the light source, negate to get direction TO the light for diffuse
-    vec3 lightDir = normalize(-ubo.skyLightDir);
+    // skyLightDir points TOWARD the light source (sun position direction)
+    vec3 lightDir = normalize(ubo.skyLightDir);
     vec3 normal = normalize(vNormal);
     
     // Ambient + diffuse lighting
