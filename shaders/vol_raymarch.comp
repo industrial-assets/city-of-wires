@@ -1,0 +1,183 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(push_constant) uniform Push {
+    ivec4 dims;
+    vec4 scalars0;
+    vec4 scalars1;
+    vec4 scalars2;
+    vec4 scalars3;
+} pc;
+
+layout(set = 0, binding = 0) uniform VolumetricParams {
+    mat4 view;
+    mat4 proj;
+    mat4 invView;
+    mat4 invProj;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 prevViewProj;
+    mat4 invPrevViewProj;
+    vec4 cameraPos;
+    vec4 prevCameraPos;
+    vec4 lightDir; // Legacy
+    vec4 fogColorSigma;
+    vec4 params;
+    vec4 jitterFrameTime;
+    vec4 skyLightDir;    // xyz = direction (TO sun), w = intensity
+    vec4 skyLightColor;  // xyz = color, w = scattering boost
+} g;
+
+layout(set = 1, binding = 0, r16f) uniform readonly image3D densityImage;
+layout(set = 1, binding = 1, rgba16f) uniform readonly image3D lightImage;
+layout(set = 1, binding = 2, rgba16f) uniform image2D scatteringImage;
+layout(set = 1, binding = 3, r16f) uniform image2D transmittanceImage;
+layout(set = 1, binding = 5) uniform sampler2D depthTexture;
+
+void main() {
+    ivec2 extent = imageSize(scatteringImage);
+    if (gl_GlobalInvocationID.x >= uint(extent.x) || gl_GlobalInvocationID.y >= uint(extent.y)) {
+        return;
+    }
+
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec3 froxelDim = pc.dims.xyz;
+
+    vec2 extentF = vec2(extent);
+    vec2 invExtent = 1.0 / extentF;
+    vec2 jitter = vec2(g.jitterFrameTime.z, g.jitterFrameTime.w) * 0.0; // Disable jitter for now
+
+    vec2 uv = (vec2(coord) + 0.5 + jitter) * invExtent;
+    vec2 ndc = uv * 2.0 - 1.0;
+
+    // Sample depth buffer to get geometry occlusion
+    float depthSample = texture(depthTexture, uv).r;
+    
+    // Reconstruct world-space ray
+    vec4 nearPoint = g.invViewProj * vec4(ndc, 0.0, 1.0);
+    vec4 farPoint = g.invViewProj * vec4(ndc, 1.0, 1.0);
+    vec4 depthPoint = g.invViewProj * vec4(ndc, depthSample, 1.0);
+    nearPoint /= nearPoint.w;
+    farPoint /= farPoint.w;
+    depthPoint /= depthPoint.w;
+
+    vec3 rayOrigin = g.cameraPos.xyz;
+    vec3 rayDir = normalize(farPoint.xyz - nearPoint.xyz);
+    float maxRayDistance = length(depthPoint.xyz - rayOrigin);
+
+    const float cellSizeXZ = 4.0;
+    const float cellSizeY = 4.0;
+    vec3 cellSize = vec3(cellSizeXZ, cellSizeY, cellSizeXZ);
+    vec3 gridExtent = vec3(froxelDim) * cellSize;
+    
+    // World-space aligned grid, snapped to cell boundaries
+    vec3 gridCenter = floor(g.cameraPos.xyz / cellSize) * cellSize;
+    gridCenter.y = gridExtent.y * 0.5; // Fixed height at ground level
+    vec3 gridMin = gridCenter - gridExtent * 0.5;
+    vec3 gridMax = gridMin + gridExtent;
+
+    // Ray-box intersection with froxel volume (robust version)
+    vec3 invDir = 1.0 / (rayDir + vec3(1e-6)); // Avoid division by zero
+    vec3 t0 = (gridMin - rayOrigin) * invDir;
+    vec3 t1 = (gridMax - rayOrigin) * invDir;
+    
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+    
+    float tNear = max(max(tmin.x, tmin.y), max(tmin.z, 0.0));
+    float tFar = min(min(tmax.x, tmax.y), min(tmax.z, maxRayDistance));
+
+    vec3 scattering = vec3(0.0);
+    float transmittance = 1.0;
+
+    if (tNear < tFar && tFar > 0.0) {
+        const int marchSteps = 80;
+        float marchDistance = tFar - tNear;
+        float stepSize = marchDistance / float(marchSteps);
+        
+        for (int i = 0; i < marchSteps; ++i) {
+            float t = tNear + stepSize * (float(i) + 0.5);
+            vec3 worldPos = rayOrigin + rayDir * t;
+            
+            // Convert world position to froxel coordinates
+            vec3 localPos = worldPos - gridMin;
+            vec3 froxelCoordF = localPos / cellSize;
+            
+            // Clamp to valid range
+            froxelCoordF = clamp(froxelCoordF, vec3(0.5), vec3(froxelDim) - vec3(0.5));
+            
+            // Trilinear filtering for smooth sampling
+            ivec3 coord0 = ivec3(floor(froxelCoordF - 0.5));
+            ivec3 coord1 = coord0 + ivec3(1);
+            vec3 frac = fract(froxelCoordF - 0.5);
+            
+            coord0 = clamp(coord0, ivec3(0), ivec3(froxelDim) - ivec3(1));
+            coord1 = clamp(coord1, ivec3(0), ivec3(froxelDim) - ivec3(1));
+            
+            // Sample 8 corners for trilinear interpolation
+            float d000 = imageLoad(densityImage, ivec3(coord0.x, coord0.y, coord0.z)).r;
+            float d001 = imageLoad(densityImage, ivec3(coord0.x, coord0.y, coord1.z)).r;
+            float d010 = imageLoad(densityImage, ivec3(coord0.x, coord1.y, coord0.z)).r;
+            float d011 = imageLoad(densityImage, ivec3(coord0.x, coord1.y, coord1.z)).r;
+            float d100 = imageLoad(densityImage, ivec3(coord1.x, coord0.y, coord0.z)).r;
+            float d101 = imageLoad(densityImage, ivec3(coord1.x, coord0.y, coord1.z)).r;
+            float d110 = imageLoad(densityImage, ivec3(coord1.x, coord1.y, coord0.z)).r;
+            float d111 = imageLoad(densityImage, ivec3(coord1.x, coord1.y, coord1.z)).r;
+            
+            vec3 l000 = imageLoad(lightImage, ivec3(coord0.x, coord0.y, coord0.z)).rgb;
+            vec3 l001 = imageLoad(lightImage, ivec3(coord0.x, coord0.y, coord1.z)).rgb;
+            vec3 l010 = imageLoad(lightImage, ivec3(coord0.x, coord1.y, coord0.z)).rgb;
+            vec3 l011 = imageLoad(lightImage, ivec3(coord0.x, coord1.y, coord1.z)).rgb;
+            vec3 l100 = imageLoad(lightImage, ivec3(coord1.x, coord0.y, coord0.z)).rgb;
+            vec3 l101 = imageLoad(lightImage, ivec3(coord1.x, coord0.y, coord1.z)).rgb;
+            vec3 l110 = imageLoad(lightImage, ivec3(coord1.x, coord1.y, coord0.z)).rgb;
+            vec3 l111 = imageLoad(lightImage, ivec3(coord1.x, coord1.y, coord1.z)).rgb;
+            
+            // Interpolate
+            float sigmaT = mix(
+                mix(mix(d000, d001, frac.z), mix(d010, d011, frac.z), frac.y),
+                mix(mix(d100, d101, frac.z), mix(d110, d111, frac.z), frac.y),
+                frac.x
+            );
+            
+            vec3 Li = mix(
+                mix(mix(l000, l001, frac.z), mix(l010, l011, frac.z), frac.y),
+                mix(mix(l100, l101, frac.z), mix(l110, l111, frac.z), frac.y),
+                frac.x
+            );
+
+            // Accumulate scattering from local lights
+            float albedo = pc.scalars0.w;
+            vec3 deltaL = transmittance * sigmaT * albedo * Li * stepSize;
+            scattering += deltaL;
+            
+            // Sky light contribution (sun/moon) - directional atmospheric scattering
+            if (g.skyLightDir.w > 0.0) { // Check if intensity > 0
+                vec3 skyDir = g.skyLightDir.xyz;
+                float skyIntensity = g.skyLightDir.w;
+                vec3 skyColor = g.skyLightColor.xyz;
+                float skyBoost = g.skyLightColor.w;
+                
+                // Simple directional scattering (no shadowing for sky light)
+                // Angle between view ray and sky light direction affects intensity
+                float cosTheta = dot(normalize(rayDir), -skyDir); // Negative because skyDir points TO sun
+                float phase = 0.5 + 0.5 * cosTheta; // Simple forward scattering phase
+                
+                vec3 skyScattering = transmittance * sigmaT * albedo * 
+                                     skyColor * skyIntensity * skyBoost * phase * stepSize;
+                scattering += skyScattering;
+            }
+
+            // Update transmittance
+            transmittance *= exp(-sigmaT * stepSize);
+            
+            if (transmittance < 0.01) {
+                break;
+            }
+        }
+    }
+
+    imageStore(scatteringImage, coord, vec4(scattering, transmittance));
+    imageStore(transmittanceImage, coord, vec4(transmittance));
+}

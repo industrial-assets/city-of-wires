@@ -1,0 +1,65 @@
+#version 450
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(push_constant) uniform Push {
+    ivec4 dims;
+    vec4 scalars0;
+    vec4 scalars1;
+} pc;
+
+layout(set = 0, binding = 0) uniform VolumetricParams {
+    mat4 view;
+    mat4 proj;
+    mat4 invView;
+    mat4 invProj;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 prevViewProj;
+    mat4 invPrevViewProj;
+    vec4 cameraPos;
+    vec4 prevCameraPos;
+    vec4 lightDir;
+    vec4 fogColorSigma;
+    vec4 params;
+    vec4 jitterFrameTime;
+} g;
+
+struct DensityRecord {
+    vec4 minBoundsSigma;
+    vec4 maxBounds;
+    vec4 albedo;
+};
+
+layout(set = 2, binding = 3) readonly buffer DensityVolumes {
+    DensityRecord records[];
+} densityVolumes;
+
+layout(set = 1, binding = 0, r16f) uniform image3D densityImage;
+
+void main() {
+    ivec3 froxelDim = pc.dims.xyz;
+
+    if (gl_GlobalInvocationID.x >= uint(froxelDim.x) ||
+        gl_GlobalInvocationID.y >= uint(froxelDim.y) ||
+        gl_GlobalInvocationID.z >= uint(froxelDim.z)) {
+        return;
+    }
+
+    ivec3 coord = ivec3(gl_GlobalInvocationID.xyz);
+    float sigmaT = g.fogColorSigma.w;
+
+    int densityCount = int(pc.scalars1.w + 0.5);
+    for (int i = 0; i < densityCount; ++i) {
+        DensityRecord record = densityVolumes.records[i];
+        if (float(coord.x) >= record.minBoundsSigma.x && float(coord.x) <= record.maxBounds.x &&
+            float(coord.y) >= record.minBoundsSigma.y && float(coord.y) <= record.maxBounds.y &&
+            float(coord.z) >= record.minBoundsSigma.z && float(coord.z) <= record.maxBounds.z) {
+            sigmaT += record.minBoundsSigma.w;
+        }
+    }
+
+    imageStore(densityImage, coord, vec4(sigmaT, 0.0, 0.0, 0.0));
+}
+
+

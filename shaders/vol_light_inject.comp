@@ -1,0 +1,142 @@
+#version 450
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(push_constant) uniform Push {
+    ivec4 dims;
+    vec4 scalars0;
+    vec4 scalars1;
+    vec4 scalars2;
+    vec4 scalars3;
+} pc;
+
+layout(set = 0, binding = 0) uniform VolumetricParams {
+    mat4 view;
+    mat4 proj;
+    mat4 invView;
+    mat4 invProj;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 prevViewProj;
+    mat4 invPrevViewProj;
+    vec4 cameraPos;
+    vec4 prevCameraPos;
+    vec4 lightDir;
+    vec4 fogColorSigma;
+    vec4 params;
+    vec4 jitterFrameTime;
+} g;
+
+struct LightRecord {
+    vec4 colorIntensity;
+    vec4 positionRadius;
+};
+
+layout(set = 2, binding = 0) readonly buffer LightRecords {
+    LightRecord records[];
+} lightRecords;
+
+layout(set = 1, binding = 1, rgba16f) uniform image3D lightImage;
+
+void main() {
+    ivec3 froxelDim = pc.dims.xyz;
+
+    if (gl_GlobalInvocationID.x >= uint(froxelDim.x) ||
+        gl_GlobalInvocationID.y >= uint(froxelDim.y) ||
+        gl_GlobalInvocationID.z >= uint(froxelDim.z)) {
+        return;
+    }
+
+    ivec3 coord = ivec3(gl_GlobalInvocationID.xyz);
+    int lightCount = int(pc.scalars1.z + 0.5);
+
+    const float cellSizeXZ = 4.0;
+    const float cellSizeY = 4.0;
+    vec3 cellSize = vec3(cellSizeXZ, cellSizeY, cellSizeXZ);
+    
+    vec3 gridExtent = vec3(froxelDim) * cellSize;
+    
+    // World-space aligned grid (match raymarch.comp)
+    vec3 gridCenter = floor(g.cameraPos.xyz / cellSize) * cellSize;
+    gridCenter.y = gridExtent.y * 0.5;
+    vec3 origin = gridCenter - gridExtent * 0.5;
+    vec3 froxelPos = origin + (vec3(coord) + vec3(0.5)) * cellSize;
+
+    vec3 accum = vec3(0.0);
+    
+    // Debug: Ensure we start fresh
+    if (lightCount == 0) {
+        imageStore(lightImage, coord, vec4(0.0));
+        return;
+    }
+    
+    // Only accumulate light from sources that are close enough
+    for (int i = 0; i < lightCount; ++i) {
+        vec3 lightColor = lightRecords.records[i].colorIntensity.rgb;
+        float intensity = lightRecords.records[i].colorIntensity.a;
+        vec3 lightPos = lightRecords.records[i].positionRadius.xyz;
+        float radiusOrSize = lightRecords.records[i].positionRadius.w;
+        
+        bool isBox = radiusOrSize < 0.0;
+        float size = abs(radiusOrSize);
+
+        if (isBox) {
+            // Box-shaped light volume
+            vec3 offset = abs(froxelPos - lightPos);
+            vec3 halfSize = vec3(size * 0.5);
+            
+            // Check if inside box
+            if (offset.x > halfSize.x || offset.y > halfSize.y || offset.z > halfSize.z) {
+                continue;
+            }
+            
+            // Distance from center
+            float dist = length(offset);
+            float maxDist = length(halfSize);
+            
+            // Soft falloff from center
+            float falloff = 1.0 - smoothstep(0.0, maxDist, dist);
+            float contribution = intensity * falloff;
+            accum += lightColor * contribution;
+            
+        } else {
+            // Cylindrical beam (original code)
+            float radius = size;
+
+            // Calculate horizontal distance (XZ plane)
+            vec2 horizOffset = froxelPos.xz - lightPos.xz;
+            float horizDist = length(horizOffset);
+            
+            // Calculate vertical distance
+            float heightAbove = froxelPos.y - lightPos.y;
+            
+            // Only consider points above the light source
+            if (heightAbove < 0.0 || heightAbove > 400.0) {
+                continue;
+            }
+            
+            // Tight cylindrical beam with slight expansion
+            float coneExpansion = 1.0 + heightAbove * 0.001; // Very slight expansion (0.1% per meter)
+            float beamRadius = radius * coneExpansion;
+            
+            // Hard cutoff outside beam
+            if (horizDist > beamRadius * 1.2) {
+                continue;
+            }
+            
+            // Tight core with soft edge
+            float core = smoothstep(beamRadius * 0.9, beamRadius * 0.3, horizDist); // Bright core
+            float edge = smoothstep(beamRadius * 1.2, beamRadius * 0.9, horizDist); // Soft edge
+            float radialFalloff = mix(edge * 0.3, 1.0, core); // Core is full brightness, edge is 30%
+            
+            // Exponential vertical falloff
+            float verticalFalloff = exp(-heightAbove * 0.0025); // Fade with distance
+            
+            // Final contribution
+            float contribution = intensity * radialFalloff * verticalFalloff;
+            accum += lightColor * contribution;
+        }
+    }
+
+    imageStore(lightImage, coord, vec4(accum, 1.0));
+}

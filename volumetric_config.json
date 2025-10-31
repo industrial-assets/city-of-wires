@@ -1,0 +1,78 @@
+{
+  "froxel_grid": {
+    "width": 160,
+    "height": 96,
+    "depth": 160,
+    "near": 0.5,
+    "far": 250.0
+  },
+  "fog": {
+    "base_density": 0.015,
+    "color": [0.4, 0.5, 0.6],
+    "albedo": 0.92,
+    "phase_g": 0.7
+  },
+  "lights": {
+    "intensity_scale": 0.10,
+    "radius_scale": 5.0,
+    "attenuation_falloff": 0.01
+  },
+  "neon_lights": {
+    "intensity_multiplier": 2.0,
+    "radius_multiplier": 0.15
+  },
+  "sky_light": {
+    "enable_sky_light": true,
+    "sky_light_direction_x": 0.3,
+    "sky_light_direction_y": -0.6,
+    "sky_light_direction_z": 0.4,
+    "sky_light_color_r": 0.65,
+    "sky_light_color_g": 0.95,
+    "sky_light_color_b": 0.85,
+    "sky_light_intensity": 0.5,
+    "sky_light_scattering_boost": 0.25
+  },
+  "ground_lights": {
+    "attempts": 100,
+    "max_count": 20,
+    "min_clearance": 15.0,
+    "min_height": 3.0,
+    "max_height": 8.0,
+    "min_size": 3.0,
+    "max_size": 7.0,
+    "min_intensity": 2.0,
+    "max_intensity": 20.0
+  },
+  "culling": {
+    "max_distance": 320.0,
+    "frustum_margin": 50.0,
+    "near_camera_always_keep": 100.0
+  },
+  "ray_march": {
+    "steps": 80,
+    "step_size_multiplier": 1.0,
+    "jitter_amount": 1.0
+  },
+  "temporal": {
+    "blend_alpha": 0.95
+  },
+  "post_processing": {
+    "scattering_multiplier": 1.0,
+    "transmittance_floor": 0.7,
+    "transmittance_mix": 0.5,
+    "chromatic_aberration_strength": 0.002
+  },
+  "anamorphic_bloom": {
+    "enable_anamorphic_bloom": true,
+    "anamorphic_threshold": 0.3,
+    "anamorphic_intensity": 0.8,
+    "anamorphic_blur_radius": 3.0,
+    "anamorphic_aspect_ratio": 3.0,
+    "anamorphic_sample_count": 8
+  },
+  "debug": {
+    "enable_output": true,
+    "frame_interval": 60
+  }
+}
+

@@ -1,0 +1,70 @@
+#version 450
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(push_constant) uniform Push {
+    ivec4 dims;
+    vec4 scalars0;
+    vec4 scalars1;
+} pc;
+
+struct LightRecord {
+    vec4 colorIntensity;
+};
+
+layout(set = 0, binding = 0) uniform VolumetricParams {
+    mat4 view;
+    mat4 proj;
+    mat4 invView;
+    mat4 invProj;
+    mat4 viewProj;
+    mat4 invViewProj;
+    mat4 prevViewProj;
+    mat4 invPrevViewProj;
+    vec4 cameraPos;
+    vec4 prevCameraPos;
+    vec4 lightDir;
+    vec4 fogColorSigma;
+    vec4 params;
+    vec4 jitterFrameTime;
+} g;
+
+layout(set = 2, binding = 0) readonly buffer LightRecords {
+    LightRecord records[];
+} lightRecords;
+
+layout(set = 2, binding = 1) buffer ClusterOffsets {
+    uint offsets[];
+} clusterOffsets;
+
+layout(set = 2, binding = 2) buffer ClusterIndices {
+    uint indices[];
+} clusterIndices;
+
+void main() {
+    ivec3 froxelDim = pc.dims.xyz;
+
+    if (gl_GlobalInvocationID.x >= uint(froxelDim.x) ||
+        gl_GlobalInvocationID.y >= uint(froxelDim.y) ||
+        gl_GlobalInvocationID.z >= uint(froxelDim.z)) {
+        return;
+    }
+
+    uint froxelIndex = gl_GlobalInvocationID.x +
+        uint(froxelDim.x) * (gl_GlobalInvocationID.y + uint(froxelDim.y) * gl_GlobalInvocationID.z);
+
+    uint offsetCount = clusterOffsets.offsets.length();
+    if (froxelIndex < offsetCount) {
+        clusterOffsets.offsets[froxelIndex] = 0u;
+    }
+    if (froxelIndex + 1u < offsetCount) {
+        clusterOffsets.offsets[froxelIndex + 1u] = 0u;
+    }
+
+    uint indexCount = clusterIndices.indices.length();
+    if (froxelIndex < indexCount) {
+        clusterIndices.indices[froxelIndex] = 0u;
+    }
+}
+
+
